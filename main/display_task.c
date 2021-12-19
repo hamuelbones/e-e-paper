@@ -3,6 +3,7 @@
 //
 
 #include "display_task.h"
+#include "display_buffer.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 
@@ -15,10 +16,6 @@
 #define GPIO_DISPLAY_RST (GPIO_NUM_5)
 #define GPIO_DISPLAY_BUSY (GPIO_NUM_6)
 
-#define DISPLAY_WIDTH 800
-#define DISPLAY_HEIGHT 480
-
-static uint8_t _buffer[DISPLAY_HEIGHT * DISPLAY_WIDTH / 8];
 static TaskHandle_t _displayHandle;
 
 static void _write_display_command(spi_device_handle_t handle, const uint8_t *cmd, uint8_t len) {
@@ -47,7 +44,7 @@ static void _write_display_command(spi_device_handle_t handle, const uint8_t *cm
 }
 
 
-static void _render(spi_device_handle_t handle, const uint8_t *buffer, size_t len) {
+static void _render(spi_device_handle_t handle, const uint8_t *buffer) {
 
     printf("Reset the EPD driver IC\n");
     gpio_set_level(GPIO_DISPLAY_RST, 0);
@@ -157,13 +154,15 @@ static void _render(spi_device_handle_t handle, const uint8_t *buffer, size_t le
     };
     _write_display_command(handle, lut24, 43);
 
-    printf("load image data\n");
+
+    printf("image data\n");
+
     const uint8_t new_data[1] = {0x13};
     _write_display_command(handle, new_data, 1);
 
     gpio_set_level(GPIO_DISPLAY_DC, 1);
 
-    for (int i=0; i<len; i+=256) {
+    for (int i=0; i<BUFFER_SIZE; i+=256) {
         spi_transaction_t transaction = {
                 .length=256*8, .tx_buffer=&buffer[i],
         };
@@ -191,6 +190,7 @@ static void _render(spi_device_handle_t handle, const uint8_t *buffer, size_t le
 
     const uint8_t deep_sleep[2] = {0x07, 0xa5};
     _write_display_command(handle, deep_sleep, 2);
+
 }
 
 
@@ -236,9 +236,6 @@ void _Noreturn display_task(void* params) {
             .clock_speed_hz = 1*1000*1000,
             .spics_io_num = GPIO_DISPLAY_CS,
             .queue_size = 4,
-            //.cs_ena_pretrans = 1,
-            //.cs_ena_posttrans = 1,
-            //.flags = SPI_DEVICE_HALFDUPLEX,
     };
 
     spi_device_handle_t deviceHandle;
@@ -246,21 +243,33 @@ void _Noreturn display_task(void* params) {
     ret = spi_bus_add_device(SPI2_HOST, &deviceConfig, &deviceHandle);
     ESP_ERROR_CHECK(ret);
 
-    static uint8_t i = 0xFF;
-    while (1) {
-        vTaskDelay(10);
-        printf("next frame\n");
+    static int i = 15;
 
-        for (int j=0; j<480; j++) {
-            int shift = j % 8;
-            for (int k=0; k<800; k+=8) {
-                _buffer[j*100+ k/8] = (i << shift) | (i >> (8-shift));
-            }
+    while (1) {
+        i -= 1;
+        if (i <= 3) {
+            i = 0x0F;
+        }
+        vTaskDelay(10);
+        printf("next frame %i\n", i);
+
+        DISPBUF_ClearActive();
+
+        DISPBUF_DrawHorizontalLine(5, 5, 800-5);
+        DISPBUF_DrawHorizontalLine(480-5, 5, 800-5);
+
+        for (int j=5; j<480-5; j+= i) {
+            DISPBUF_DrawHorizontalLine(j, 5, 800-5);
         }
 
-        i--;
+        DISPBUF_DrawVerticalLine(5, 5, 480-5);
+        DISPBUF_DrawVerticalLine(800-5, 5, 480-5);
 
-        _render(deviceHandle, _buffer, sizeof(_buffer));
+        for (int j=5; j<800-5; j+= i) {
+            DISPBUF_DrawVerticalLine(j, 5, 480-5);
+        }
+
+        _render(deviceHandle, DISPBUF_ActiveBuffer());
     }
 
 }
