@@ -4,6 +4,8 @@
 
 #include "display_buffer.h"
 #include <string.h>
+#include "font/fonts.h"
+#include <stdio.h>
 
 static uint8_t _buffer1[BUFFER_SIZE];
 
@@ -18,17 +20,59 @@ uint8_t * DISPBUF_ActiveBuffer(void) {
 }
 
 void DISPBUF_DrawPoint(uint16_t x, uint16_t y) {
-    _activeBuf[100*x + y/8] |= 1<<(7-y%8);
+    if (x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT) {
+        return;
+    }
+    _activeBuf[100*y + x/8] |= 1<< (7-x%8);
 }
 
-void DISPBUF_DrawHorizontalLine(uint16_t x, uint16_t y1, uint16_t y2) {
+void DISPBUF_ClearPoint(uint16_t x, uint16_t y) {
+    if (x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT) {
+        return;
+    }
+    _activeBuf[100*y + x/8] &= ~(1 << (7-x%8));
+}
+
+void DISPBUF_DrawVerticalLine(uint16_t x, uint16_t y1, uint16_t y2) {
     for (int y=y1; y<y2; y++) {
         DISPBUF_DrawPoint(x, y);
     }
 }
 
-void DISPBUF_DrawVerticalLine(uint16_t y, uint16_t x1, uint16_t x2) {
+void DISPBUF_DrawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2) {
     for (int x=x1; x<x2; x++) {
         DISPBUF_DrawPoint(x, y);
     }
+}
+
+void DISPBUF_DrawBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap) {
+    for(int j=y; j<y+height; j++) {
+        int offset = ((width + 7) / 8)*(j-y);
+        for (int i=x; i<x+width; i++) {
+            if (bitmap[offset+(i-x)/8] & (1<<(7-(i-x)%8))) {
+                DISPBUF_DrawPoint(i, j);
+            } else {
+                DISPBUF_ClearPoint(i, j);
+            }
+        }
+    }
+}
+
+int DISPBUF_DrawCharacter(uint16_t x, uint16_t y, char c, EPAPER_DISPLAY_FONT_ID fontId) {
+    const FONT_CHARACTER *bitmap = FONT_GetBitmap(fontId, c);
+    if (!bitmap) {
+        return 0;
+    }
+    DISPBUF_DrawBitmap(x, y, bitmap->width, bitmap->height, bitmap->data);
+    return bitmap->width;
+}
+
+int DISPBUF_DrawString(uint16_t x, uint16_t y, const char* s, EPAPER_DISPLAY_FONT_ID fontId) {
+    int offset = 0;
+    printf("%s\n", s);
+    while(*s != '\0') {
+        offset += DISPBUF_DrawCharacter(x+offset, y, *s, fontId);
+        s++;
+    }
+    return offset;
 }

@@ -243,33 +243,27 @@ void _Noreturn display_task(void* params) {
     ret = spi_bus_add_device(SPI2_HOST, &deviceConfig, &deviceHandle);
     ESP_ERROR_CHECK(ret);
 
-    static int i = 15;
+    static int i = 0;
 
     while (1) {
-        i -= 1;
-        if (i <= 3) {
-            i = 0x0F;
-        }
         vTaskDelay(10);
         printf("next frame %i\n", i);
 
+        char test_string[100];
+        snprintf(test_string, 100, "Hello font-rendering world! %u %u Happy wedding Brandon and Kenzie!", i, i);
+
         DISPBUF_ClearActive();
+        DISPBUF_DrawString(5, 100, test_string, HELVETICA_14);
 
-        DISPBUF_DrawHorizontalLine(5, 5, 800-5);
-        DISPBUF_DrawHorizontalLine(480-5, 5, 800-5);
+        DISPBUF_DrawString(5, 5, "TEST", HELVETICA_14);
+        DISPBUF_DrawString(400, 5, "TESTX", HELVETICA_14);
+        DISPBUF_DrawString(400, 400, "TESTXY", HELVETICA_14);
+        DISPBUF_DrawString(5, 400, "TESTY", HELVETICA_14);
 
-        for (int j=5; j<480-5; j+= i) {
-            DISPBUF_DrawHorizontalLine(j, 5, 800-5);
-        }
-
-        DISPBUF_DrawVerticalLine(5, 5, 480-5);
-        DISPBUF_DrawVerticalLine(800-5, 5, 480-5);
-
-        for (int j=5; j<800-5; j+= i) {
-            DISPBUF_DrawVerticalLine(j, 5, 480-5);
-        }
+        DISPBUF_DrawHorizontalLine(200, 200, 400);
 
         _render(deviceHandle, DISPBUF_ActiveBuffer());
+        i++;
     }
 
 }
