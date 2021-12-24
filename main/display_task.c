@@ -44,7 +44,7 @@ static void _write_display_command(spi_device_handle_t handle, const uint8_t *cm
 }
 
 
-static void _render(spi_device_handle_t handle, const uint8_t *buffer) {
+static void _render(spi_device_handle_t handle, const uint8_t *buffer, const uint8_t *old_buffer) {
 
     printf("Reset the EPD driver IC\n");
     gpio_set_level(GPIO_DISPLAY_RST, 0);
@@ -157,6 +157,17 @@ static void _render(spi_device_handle_t handle, const uint8_t *buffer) {
 
     printf("image data\n");
 
+    const uint8_t old_data[1] = {0x13};
+    _write_display_command(handle, old_data, 1);
+    gpio_set_level(GPIO_DISPLAY_DC, 1);
+    for (int i=0; i<BUFFER_SIZE; i+=256) {
+        spi_transaction_t transaction = {
+                .length=256*8, .tx_buffer=&old_buffer[i],
+        };
+        spi_device_polling_transmit(handle, &transaction);
+    }
+    gpio_set_level(GPIO_DISPLAY_DC, 0);
+
     const uint8_t new_data[1] = {0x13};
     _write_display_command(handle, new_data, 1);
 
@@ -252,6 +263,7 @@ void _Noreturn display_task(void* params) {
         char test_string[100];
         snprintf(test_string, 100, "Hello font-rendering world! %u %u Happy wedding Brandon and Kenzie!", i, i);
 
+        DISPBUF_Swap();
         DISPBUF_ClearActive();
         DISPBUF_DrawString(5, 100, test_string, HELVETICA_14);
 
@@ -262,7 +274,7 @@ void _Noreturn display_task(void* params) {
 
         DISPBUF_DrawHorizontalLine(200, 200, 400);
 
-        _render(deviceHandle, DISPBUF_ActiveBuffer());
+        _render(deviceHandle, DISPBUF_ActiveBuffer(), DISPBUF_InactiveBuffer());
         i++;
     }
 

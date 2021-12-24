@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 static uint8_t _buffer1[BUFFER_SIZE];
+static uint8_t _buffer2[BUFFER_SIZE];
 
 static uint8_t* _activeBuf = _buffer1;
 
@@ -17,6 +18,18 @@ void DISPBUF_ClearActive(void) {
 
 uint8_t * DISPBUF_ActiveBuffer(void) {
     return _activeBuf;
+}
+
+uint8_t * DISPBUF_InactiveBuffer(void) {
+    return _activeBuf == _buffer1 ? _buffer2 : _buffer1;
+}
+
+void DISPBUF_Swap(void) {
+    if (_activeBuf == _buffer1) {
+        _activeBuf = _buffer2;
+    } else {
+        _activeBuf = _buffer1;
+    }
 }
 
 void DISPBUF_DrawPoint(uint16_t x, uint16_t y) {
