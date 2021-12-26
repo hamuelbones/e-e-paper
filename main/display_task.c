@@ -7,14 +7,14 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 
-#define GPIO_DISPLAY_CS (GPIO_NUM_0)
-#define GPIO_DISPLAY_SCK (GPIO_NUM_1)
-#define GPIO_DISPLAY_MOSI (GPIO_NUM_2)
-#define GPIO_DISPLAY_MISO (GPIO_NUM_3)
+#define GPIO_DISPLAY_CS (GPIO_NUM_9)
+#define GPIO_DISPLAY_SCK (GPIO_NUM_0)
+#define GPIO_DISPLAY_MOSI (GPIO_NUM_1)
+#define GPIO_DISPLAY_MISO (GPIO_NUM_2)
 
-#define GPIO_DISPLAY_DC (GPIO_NUM_4)
-#define GPIO_DISPLAY_RST (GPIO_NUM_5)
-#define GPIO_DISPLAY_BUSY (GPIO_NUM_6)
+#define GPIO_DISPLAY_DC (GPIO_NUM_3)
+#define GPIO_DISPLAY_RST (GPIO_NUM_21)
+#define GPIO_DISPLAY_BUSY (GPIO_NUM_20)
 
 static TaskHandle_t _displayHandle;
 
