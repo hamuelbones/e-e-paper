@@ -14,11 +14,16 @@
 #include "esp_spi_flash.h"
 
 #include "nvs_flash.h"
+#include "driver/gpio.h"
 
 #include "wifi_task.h"
 #include "display_task.h"
 #include "bluetooth_task.h"
 
+#define GPIO_CHG_EN (GPIO_NUM_4)
+#define GPIO_CHG_PGOOD (GPIO_NUM_7)
+#define GPIO_CHG_STAT1 (GPIO_NUM_5)
+#define GPIO_CHG_STAT2 (GPIO_NUM_6)
 
 void _Noreturn app_main(void)
 {
@@ -39,6 +44,25 @@ void _Noreturn app_main(void)
             (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
+
+    gpio_config_t chg_en = {
+            .intr_type = 0,
+            .mode = GPIO_MODE_OUTPUT,
+            .pin_bit_mask = 1<<GPIO_CHG_EN,
+            .pull_down_en = 0,
+            .pull_up_en = 0,
+    };
+    gpio_config(&chg_en);
+    gpio_set_level(GPIO_CHG_EN, 0);
+
+    gpio_config_t chg_input = {
+            .intr_type = 0,
+            .mode = GPIO_MODE_INPUT,
+            .pin_bit_mask = (1<<GPIO_CHG_PGOOD) | (1<<GPIO_CHG_STAT1) | (1<<GPIO_CHG_STAT2),
+            .pull_down_en = 0,
+            .pull_up_en = 1,
+    };
+    gpio_config(&chg_input);
 
 
     //Initialize NVS
