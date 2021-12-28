@@ -65,7 +65,7 @@ void wifi_test(void) {
     wifi_config_t wifi_config = {
             .sta = {
                     .ssid = "ham",
-                    .password = "",
+                    .password = "smokyradio",
                     /* Setting a password implies station will connect to all security modes including WEP/WPA.
                      * However these modes are deprecated and not advisable to be used. Incase your Access point
                      * doesn't support WPA2, these mode can be enabled by commenting below line */
@@ -107,6 +107,8 @@ void wifi_test(void) {
 
 
 void _Noreturn wifi_task(void* params) {
+
+    vTaskDelay(1000);
 
     wifi_test();
 

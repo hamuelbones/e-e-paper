@@ -4,7 +4,7 @@
 
 #include "display_buffer.h"
 #include <string.h>
-#include "font/fonts.h"
+#include "fonts.h"
 #include <stdio.h>
 
 static uint8_t _buffer1[BUFFER_SIZE];
