@@ -24,13 +24,19 @@ def import_yaff(filename):
                 if len(line) == 0:
                     in_yaff_header = 0
                 else:
-                    key, val = line.split(": ")
-                    font_metadata[key] = val
+                    try:
+                        key, val = line.split(": ")
+                        font_metadata[key] = val
+                    except ValueError:
+                        continue
             elif not parsing_character:
                 if len(line) >= 1 and line[0] == "#":
                     comment = line
                 elif len(line) >= 2 and line[1] == "x" and line[-1] == ":":
                     character = int(line[2:4], base=16)
+                    parsing_character = True
+                elif len(line) >= 7 and line[0:4] == "u+00" and line[-1] == ":":
+                    character = int(line[4:6], base=16)
                     parsing_character = True
             else:
                 if len(line) == 0:
