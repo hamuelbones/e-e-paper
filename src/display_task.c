@@ -23,16 +23,16 @@ void _Noreturn display_task(void* params) {
     while (1) {
         vTaskDelay(100 * 1000 / configTICK_RATE_HZ);
 
-        const char *test_string = "the quick brown fox jumps over the lazy dog.";
-        const char *test_string_2 = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.";
-        const char *txest_string_3 = "0123456789 :\"!?/<>[]{}()_@#$%^&*,.;:'\\";
+        const char *test_string = "abcdefghijklmnopqrstuvwxyz.";
+        const char *test_string_2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ.";
+        const char *test_string_3 = "0123456789 :\"!?/<>[]{}()_@#$%^&*,.;:'\\";
         DISPBUF_Swap();
         DISPBUF_ClearActive();
 
         DISPLAY_COORD cursor = {5, 5};
-        DISPBUF_DrawMultiline(cursor, test_string, BITTER_PRO_24, 400, 400, 0);
-        DISPBUF_DrawMultiline(cursor, test_string_2, BITTER_PRO_24, 400, 400, DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_HORIZ_CENTER);
-        DISPBUF_DrawMultiline(cursor, test_string_3, BITTER_PRO_24, 400, 400, DRAW_TEXT_JUSTIFY_VERT_BOTTOM | DRAW_TEXT_JUSTIFY_HORIZ_RIGHT);
+        DISPBUF_DrawMultiline(cursor, test_string, BITTER_PRO_32, 400, 400, 0);
+        DISPBUF_DrawMultiline(cursor, test_string_2, BITTER_PRO_32, 400, 400, DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_HORIZ_CENTER);
+        DISPBUF_DrawMultiline(cursor, test_string_3, BITTER_PRO_32, 400, 400, DRAW_TEXT_JUSTIFY_VERT_BOTTOM | DRAW_TEXT_JUSTIFY_HORIZ_RIGHT);
 
         EPAPER_RenderBuffer(DISPBUF_ActiveBuffer(), DISPBUF_InactiveBuffer(), BUFFER_SIZE);
         i++;
