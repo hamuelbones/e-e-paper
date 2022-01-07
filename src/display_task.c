@@ -23,23 +23,16 @@ void _Noreturn display_task(void* params) {
     while (1) {
         vTaskDelay(100 * 1000 / configTICK_RATE_HZ);
 
-        char test_string[100];
-        snprintf(test_string, 100, "Hello font-rendering world! %u %u Happy wedding Brandon and Kenzie!", i, i);
-
+        const char *test_string = "the quick brown fox jumps over the lazy dog.";
+        const char *test_string_2 = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.";
+        const char *txest_string_3 = "0123456789 :\"!?/<>[]{}()_@#$%^&*,.;:'\\";
         DISPBUF_Swap();
         DISPBUF_ClearActive();
 
-        DISPLAY_COORD cursor = {5, 100};
-        DISPBUF_DrawLabel(cursor, test_string, BITTER_PRO_32, 0);
-
-        cursor.x = 420;
-        cursor.y = 5;
-        const char *lipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
-        //const char *lipsum = "Hello! asdfasdfasdf asdfasdfasdf asdf";
-        DISPBUF_DrawMultiline(cursor, lipsum, BITTER_PRO_24, 300-MIN(i, 290), 400, DRAW_TEXT_JUSTIFY_CENTER);
-
-        DISPBUF_DrawHorizontalLine(200, 200, 400);
-        DISPBUF_DrawVerticalLine(200, 200, 400);
+        DISPLAY_COORD cursor = {5, 5};
+        DISPBUF_DrawMultiline(cursor, test_string, BITTER_PRO_24, 400, 400, 0);
+        DISPBUF_DrawMultiline(cursor, test_string_2, BITTER_PRO_24, 400, 400, DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_HORIZ_CENTER);
+        DISPBUF_DrawMultiline(cursor, test_string_3, BITTER_PRO_24, 400, 400, DRAW_TEXT_JUSTIFY_VERT_BOTTOM | DRAW_TEXT_JUSTIFY_HORIZ_RIGHT);
 
         EPAPER_RenderBuffer(DISPBUF_ActiveBuffer(), DISPBUF_InactiveBuffer(), BUFFER_SIZE);
         i++;

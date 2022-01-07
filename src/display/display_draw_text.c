@@ -77,8 +77,27 @@ int DISPBUF_DrawWord(DISPLAY_COORD cursor,
 
 int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, EPAPER_DISPLAY_FONT_ID font_id,
                           uint16_t max_x, uint16_t max_y, DRAW_TEXT_FLAGS flags) {
-    // Return number of characters progressed through the line!
+
+    // TODO: need to reduce complexity and potentially break down this function.
+
+    int y_offset = 0;
+    // Recursive solution is hacky here...
+    if (flags & (DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_VERT_BOTTOM)) {
+        DRAW_TEXT_FLAGS measure_flags = flags & ~(DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_VERT_BOTTOM) | DRAW_TEXT_MEASURE;
+        int y_size = DISPBUF_FontHeight(font_id) *
+                     DISPBUF_DrawMultiline(cursor, s, font_id, max_x, max_y, measure_flags);
+
+        if (flags & DRAW_TEXT_JUSTIFY_VERT_CENTER) {
+            y_offset = (max_y-y_size)/2;
+        } else { // Bottom justify
+            y_offset = max_y-y_size;
+        }
+    }
+
+    cursor.y += y_offset;
+
     int chars_drawn = 0;
+    int lines_drawn = 0;
     int font_height = DISPBUF_FontHeight(font_id);
     DISPLAY_COORD current_cursor = {
         .x = cursor.x,
@@ -138,15 +157,16 @@ int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, EPAPER_DISPLAY_FO
 
         }
 
-        if (flags & DRAW_TEXT_JUSTIFY_CENTER) {
+        if (flags & DRAW_TEXT_JUSTIFY_HORIZ_CENTER) {
             current_cursor.x += (max_x - line_pix_length) / 2;
-        } else if (flags & DRAW_TEXT_JUSTIFY_RIGHT) {
+        } else if (flags & DRAW_TEXT_JUSTIFY_HORIZ_RIGHT) {
             current_cursor.x += (max_x - line_pix_length);
         }
 
         DISPBUF_DrawLabelWithSize(current_cursor, line_draw_start, line_draw_end-line_draw_start, font_id, flags);
 
         chars_drawn += line_end - line_draw_start;
+        lines_drawn += 1;
         line_draw_start = line_end;
         line_draw_end = line_end;
         s = line_end;
@@ -156,5 +176,5 @@ int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, EPAPER_DISPLAY_FO
         max_y -= font_height;
     }
 
-    return chars_drawn;
+    return lines_drawn;
 }
