@@ -16,8 +16,10 @@ typedef enum {
     BITTER_PRO_32,
     BITTER_PRO_40,
     BITTER_PRO_48,
+    FONT_MAX,
 } EPAPER_DISPLAY_FONT_ID;
 
 const FONT_CHARACTER *FONT_GetBitmap(EPAPER_DISPLAY_FONT_ID id, int c);
+const char* FONT_GetName(EPAPER_DISPLAY_FONT_ID id);
 
 #endif //EPAPER_DISPLAY_FONTS_H

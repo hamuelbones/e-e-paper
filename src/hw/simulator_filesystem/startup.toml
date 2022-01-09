@@ -1,0 +1,7 @@
+
+mode = "standalone"
+
+[server]
+location = "127.0.0.1:8000/deviceapi"
+auth = true
+

@@ -83,7 +83,7 @@ int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, EPAPER_DISPLAY_FO
     int y_offset = 0;
     // Recursive solution is hacky here...
     if (flags & (DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_VERT_BOTTOM)) {
-        DRAW_TEXT_FLAGS measure_flags = flags & ~(DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_VERT_BOTTOM) | DRAW_TEXT_MEASURE;
+        DRAW_TEXT_FLAGS measure_flags = (flags & ~(DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_VERT_BOTTOM)) | DRAW_TEXT_MEASURE;
         int y_size = DISPBUF_FontHeight(font_id) *
                      DISPBUF_DrawMultiline(cursor, s, font_id, max_x, max_y, measure_flags);
 

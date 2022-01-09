@@ -14,10 +14,12 @@ if(SIMULATOR)
     target_include_directories(epaper_display PRIVATE ${GTK3_INCLUDE_DIRS})
     target_link_directories(epaper_display PRIVATE ${GTK3_LIBRARY_DIRS})
 
+    add_subdirectory(apps)
     add_subdirectory(display)
     add_subdirectory(freertos)
     add_subdirectory(font)
     add_subdirectory(hw)
+    add_subdirectory(lib)
 else()
     idf_component_register(
             SRCS "epaper_display_main.c" "bluetooth_task.c" "display_task.c" "wifi_task.c"

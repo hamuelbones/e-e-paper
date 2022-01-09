@@ -1,0 +1,86 @@
+
+[application]
+name = "message_box"
+url = "127.0.0.1:8000/device_api/message_box/6/responses"
+auth = true
+
+[render_root]
+    [[render_root.box]] # small region on the right of the screen
+        x = 600
+        y = 0
+        width = 200
+        height = 480
+        [[render_root.box.text]]
+            y = 100
+            width = 200
+            height = 250
+            vertical_center = true
+            horizontal_center = true
+            value = "Brandon\n&\nKenzie"
+            font = "BITTER_PRO_48"
+        [[render_root.box.text]]
+            y = 250
+            width = 200
+            height = 100
+            vertical_center = true
+            horizontal_center = true
+            value = "02 . 05 . 2022"
+            font = "BITTER_PRO_24"
+        [[render_root.box.text]]
+            y = 250
+            width = 200
+            height = 100
+            vertical_center = true
+            horizontal_center = true
+            value = "leave a message!"
+            font = "BITTER_PRO_24"
+        [[render_root.box.image]]
+            y = 250
+            width = 200
+            height = 100
+            vertical_center = true
+            horizontal_center = true
+            value = "!!BROB_KENZ_QR_CODE!!"
+        [[render_root.box.text]]
+            y = 350
+            width = 200
+            height = 100
+            bottom = true
+            horizontal_center = true
+            value = "hambones.app/\nthisisnotapuzzle"
+            font = "BITTER_PRO_24"
+
+    [[render_root.box]] # big region on the left of the screen
+        x = 0
+        y = 0
+        width = 600
+        height = 480
+        [[render_root.box.text]]
+            x = 0
+            y = 0
+            width = 200
+            height = 480
+            vertical_center = true
+            horizontal_center = true
+            value = "!!MSG_BOX_AUTHOR!!"
+            font = "BITTER_PRO_24"
+        [[render_root.box.text]]
+            x = 200
+            y = 0
+            width = 200
+            height = 100
+            vertical_center = true
+            horizontal_center = true
+            value = "!!MSG_BOX_MESSAGE!!"
+            font = "BITTER_PRO_24"
+        # Add: separator between author and text
+
+        # To do: more decorative stuff?
+
+    [[render_root.box]] # Vertical Divider between the two regions
+        x = 590
+        y = 0
+        width = 20
+        height = 480
+        # To do: render? with rectangles
+

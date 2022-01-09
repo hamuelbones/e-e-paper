@@ -8,6 +8,9 @@
 #include "display_draw_geometry.h"
 #include "epaper_hal.h"
 
+#include "filesystem_hal.h"
+#include "toml.h"
+
 #include <stdio.h>
 
 static TaskHandle_t _displayHandle;
@@ -22,7 +25,7 @@ void _Noreturn display_task(void* params) {
 
     while (1) {
         vTaskDelay(100 * 1000 / configTICK_RATE_HZ);
-
+#if 0
         const char *test_string = "abcdefghijklmnopqrstuvwxyz.";
         const char *test_string_2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ.";
         const char *test_string_3 = "0123456789 :\"!?/<>[]{}()_@#$%^&*,.;:'\\";
@@ -36,6 +39,7 @@ void _Noreturn display_task(void* params) {
 
         EPAPER_RenderBuffer(DISPBUF_ActiveBuffer(), DISPBUF_InactiveBuffer(), BUFFER_SIZE);
         i++;
+#endif
     }
 
 }
