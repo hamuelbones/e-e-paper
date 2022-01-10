@@ -1,5 +1,6 @@
 
 if(SIMULATOR)
+    set(CMAKE_VERBOSE_MAKEFILE ON)
     add_executable(epaper_display epaper_display_main.c epaper_display_simulator_main.c bluetooth_task.c display_task.c wifi_task.c)
     target_include_directories(epaper_display PUBLIC .)
 
@@ -13,6 +14,13 @@ if(SIMULATOR)
     # and to the linker where to look for libraries
     target_include_directories(epaper_display PRIVATE ${GTK3_INCLUDE_DIRS})
     target_link_directories(epaper_display PRIVATE ${GTK3_LIBRARY_DIRS})
+
+    pkg_check_modules(OPENSSL REQUIRED openssl)
+    target_link_libraries(epaper_display PRIVATE ${OPENSSL_LIBRARIES})
+    target_compile_definitions(epaper_display PRIVATE ${OPENSSL_CFLAGS_OTHER})
+    target_include_directories(epaper_display PRIVATE ${OPENSSL_INCLUDE_DIRS})
+    target_link_directories(epaper_display PRIVATE ${OPENSSL_LIBRARY_DIRS})
+
 
     add_subdirectory(apps)
     add_subdirectory(display)

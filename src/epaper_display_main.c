@@ -32,6 +32,9 @@
 #define STARTUP_FILENAME "startup.toml"
 #define APP_CONFIG_FILENAME "config.toml"
 
+#define AUTHOR_SUBSTITUTION_VALUE "!!MSG_BOX_AUTHOR!!"
+#define MESSAGE_SUBSTITUTION_VALUE "!!MSG_BOX_MESSAGE!!"
+
 
 typedef enum {
     // Checj startup configuration
