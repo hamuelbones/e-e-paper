@@ -5,6 +5,7 @@
 #include "init_hal.h"
 #include "wifi_hal.h"
 #include "epaper_hal.h"
+#include "cryptography_hal.h"
 
 #include <stdarg.h>
 #include <printf.h>
@@ -14,7 +15,8 @@
 #include <stdbool.h>
 
 void HAL_Init(void) {
-
+    CRYPTOGRAPHY_Init();
+    CRYPTOGRAPHY_RSA_Generate();
 }
 
 void HAL_Print(const char *format, ...) {
