@@ -5,6 +5,14 @@ url = "127.0.0.1:8000/device_api/message_box/6/responses"
 auth = true
 
 [render_root]
+	[[render_root.text]]
+		y = 100
+		width = 800
+		height = 250
+		vertical_center = true
+		horizontal_center = true
+		value = "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n1234567890\n!#$%?.,_-+=/\\()[]{}|\"'"
+		font = "BITTER_PRO_48"
 	[[render_root.box]] # small region on the right of the screen
 		x = 600
 		y = 0

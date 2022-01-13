@@ -38,7 +38,7 @@ void CRYPTOGRAPHY_RSA_Generate() {
 }
 
 void CRYPTOGRAPHY_RSA_Sign() {
-
+#if 0
     // Copied from an example!!!
 
     EVP_PKEY_CTX *ctx;
@@ -71,10 +71,11 @@ void CRYPTOGRAPHY_RSA_Sign() {
     if (!sig)
         /* malloc failure */
 
-        if (EVP_PKEY_sign(ctx, sig, &siglen, md, mdlen) <= 0)
+        if (EVP_PKEY_sign(ctx, sig, &siglen, md, mdlen) <= 0) {}
     /* Error */
 
     /* Signature is siglen bytes written to buffer sig */
+#endif
 }
 
 void CRYPTOGRAPHY_RSA_Verify() {
