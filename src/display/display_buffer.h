@@ -9,6 +9,14 @@
 #include "fonts.h"
 #include <stdbool.h>
 
+typedef enum {
+    DRAW_MEASURE = (1<<0),
+    DRAW_JUSTIFY_HORIZ_CENTER = (1<<1),
+    DRAW_JUSTIFY_HORIZ_RIGHT = (1<<2),
+    DRAW_JUSTIFY_VERT_CENTER = (1<<3),
+    DRAW_JUSTIFY_VERT_BOTTOM = (1<<4),
+} DRAW_FLAGS;
+
 typedef struct {
     uint16_t x;
     uint16_t y;

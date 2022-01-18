@@ -8,18 +8,32 @@ auth = true
 	[[render_root.symbol]]
 		x = 50
 		y = 50
+		max_width = 50
+		max_height = 50
+		right = true
+		bottom = true
 		id = 0
 	[[render_root.symbol]]
-		x = 70
+		x = 50
 		y = 50
+		max_width = 50
+		max_height= 50
+		right=true
 		id = 1
 	[[render_root.symbol]]
 		x = 50
-		y = 70
+		y = 50
+		max_width = 50
+		max_height = 50
+		vertical_center = true
+		horizontal_center = true
 		id = 2
 	[[render_root.symbol]]
-		x = 70
-		y = 70
+		x = 50
+		y = 50
+		max_width = 50
+		max_height = 50
+		bottom = true
 		id = 3
 	[[render_root.text]]
 		y = 100

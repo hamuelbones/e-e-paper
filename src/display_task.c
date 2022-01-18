@@ -34,8 +34,8 @@ void _Noreturn display_task(void* params) {
 
         DISPLAY_COORD cursor = {5, 5};
         DISPBUF_DrawMultiline(cursor, test_string, BITTER_PRO_32, 400, 400, 0);
-        DISPBUF_DrawMultiline(cursor, test_string_2, BITTER_PRO_32, 400, 400, DRAW_TEXT_JUSTIFY_VERT_CENTER | DRAW_TEXT_JUSTIFY_HORIZ_CENTER);
-        DISPBUF_DrawMultiline(cursor, test_string_3, BITTER_PRO_32, 400, 400, DRAW_TEXT_JUSTIFY_VERT_BOTTOM | DRAW_TEXT_JUSTIFY_HORIZ_RIGHT);
+        DISPBUF_DrawMultiline(cursor, test_string_2, BITTER_PRO_32, 400, 400, DRAW_JUSTIFY_VERT_CENTER | DRAW_JUSTIFY_HORIZ_CENTER);
+        DISPBUF_DrawMultiline(cursor, test_string_3, BITTER_PRO_32, 400, 400, DRAW_JUSTIFY_VERT_BOTTOM | DRAW_JUSTIFY_HORIZ_RIGHT);
 
         EPAPER_RenderBuffer(DISPBUF_ActiveBuffer(), DISPBUF_InactiveBuffer(), BUFFER_SIZE);
         i++;

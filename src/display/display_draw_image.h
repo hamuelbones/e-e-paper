@@ -8,6 +8,10 @@
 #ifndef EPAPER_DISPLAY_DISPLAY_DRAW_IMAGE_H
 #define EPAPER_DISPLAY_DISPLAY_DRAW_IMAGE_H
 
-void DISPBUF_DrawBitmap(DISPLAY_COORD cursor, uint16_t width, uint16_t height, const uint8_t *bitmap);
+void DISPBUF_DrawBitmap(DISPLAY_COORD cursor,
+                        DISPLAY_COORD bitmap_size,
+                        DISPLAY_COORD bitmap_bounds,
+                        const uint8_t *bitmap,
+                        DRAW_FLAGS flags);
 
 #endif //EPAPER_DISPLAY_DISPLAY_DRAW_IMAGE_H

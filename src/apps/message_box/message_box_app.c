@@ -28,6 +28,30 @@ typedef enum {
     MESSAGE_BOX_DISPLAY
 } MESSAGE_BOX_STATE;
 
+DRAW_FLAGS _parse_draw_flags(toml_table_t *table) {
+
+    DRAW_FLAGS flags = 0;
+
+    toml_datum_t vert_center = toml_bool_in(table, "vertical_center");
+    if (vert_center.ok && vert_center.u.b) {
+        flags |= DRAW_JUSTIFY_VERT_CENTER;
+    }
+    toml_datum_t bottom = toml_bool_in(table, "bottom");
+    if (bottom.ok && bottom.u.b) {
+        flags |= DRAW_JUSTIFY_VERT_BOTTOM;
+    }
+    toml_datum_t horiz_center = toml_bool_in(table, "horizontal_center");
+    if (horiz_center.ok && horiz_center.u.b) {
+        flags |= DRAW_JUSTIFY_HORIZ_CENTER;
+    }
+    toml_datum_t right = toml_bool_in(table, "right");
+    if (right.ok && right.u.b) {
+        flags |= DRAW_JUSTIFY_HORIZ_RIGHT;
+    }
+
+    return flags;
+}
+
 void _load_message_file(MESSAGE_BOX_CONTEXT *context) {
 
     char toml_error_msg[100];
@@ -75,7 +99,7 @@ void draw_texts(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
         }
         DISPLAY_COORD origin = offset;
         DISPLAY_COORD bounds = dims;
-        DRAW_TEXT_FLAGS flags = 0;
+        DRAW_FLAGS flags = 0;
         EPAPER_DISPLAY_FONT_ID font_id = BITTER_PRO_10;
         char *render_string = "";
 
@@ -98,22 +122,8 @@ void draw_texts(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
             bounds.y = height.u.i;
         }
 
-        toml_datum_t vert_center = toml_bool_in(text, "vertical_center");
-        if (vert_center.ok && vert_center.u.b) {
-            flags |= DRAW_TEXT_JUSTIFY_VERT_CENTER;
-        }
-        toml_datum_t bottom = toml_bool_in(text, "bottom");
-        if (bottom.ok && bottom.u.b) {
-            flags |= DRAW_TEXT_JUSTIFY_VERT_BOTTOM;
-        }
-        toml_datum_t horiz_center = toml_bool_in(text, "horizontal_center");
-        if (horiz_center.ok && horiz_center.u.b) {
-            flags |= DRAW_TEXT_JUSTIFY_HORIZ_CENTER;
-        }
-        toml_datum_t right = toml_bool_in(text, "right");
-        if (right.ok && right.u.b) {
-            flags |= DRAW_TEXT_JUSTIFY_HORIZ_RIGHT;
-        }
+        flags = _parse_draw_flags(text);
+
         toml_datum_t font = toml_string_in(text, "font");
         if (font.ok) {
             int j = 0;
@@ -156,7 +166,9 @@ void draw_symbols(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
             break;
         }
         DISPLAY_COORD origin = offset;
+        DISPLAY_COORD bounds = {DISPLAY_WIDTH-origin.x, DISPLAY_HEIGHT-origin.y};
         int symbol_id = 0;
+        DRAW_FLAGS flags = 0;
 
         toml_datum_t x_offset = toml_int_in(symbol, "x");
         if (x_offset.ok) {
@@ -168,14 +180,26 @@ void draw_symbols(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
             origin.y += y_offset.u.i;
         }
 
+        toml_datum_t width = toml_int_in(symbol, "max_width");
+        if (width.ok) {
+            bounds.x = width.u.i;
+        }
+        toml_datum_t height = toml_int_in(symbol, "max_height");
+        if (height.ok) {
+            bounds.y = height.u.i;
+        }
+
         toml_datum_t id = toml_int_in(symbol, "id");
         if (id.ok) {
             symbol_id = id.u.i;
         }
 
+        flags = _parse_draw_flags(symbol);
+
         const FONT_CHARACTER *c = FONT_GetBitmap(SYSTEM_SYMBOLS, symbol_id);
         if (c) {
-            DISPBUF_DrawBitmap(origin, c->width, c->height, c->data);
+            DISPLAY_COORD symbol_size = {.x=c->width, .y=c->height};
+            DISPBUF_DrawBitmap(origin, symbol_size, bounds, c->data, flags);
         }
     }
 }
