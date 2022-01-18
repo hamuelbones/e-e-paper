@@ -59,156 +59,171 @@ void* message_box_init(toml_table_t *startup_config, toml_table_t * device_confi
     return context;
 }
 
-void draw_section(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
-    toml_array_t * sub_boxes = toml_array_in(box, "box");
-    if (sub_boxes) {
-        int i = 0;
-        while (true) {
-            toml_table_t *sub_box = toml_table_at(sub_boxes, i);
-            if (!sub_box) {
-                break;
-            }
-            toml_datum_t x_offset = toml_int_in(sub_box, "x");
-            toml_datum_t y_offset = toml_int_in(sub_box, "y");
-            toml_datum_t width = toml_int_in(sub_box, "width");
-            toml_datum_t height = toml_int_in(sub_box, "height");
+void draw_texts(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
 
-            DISPLAY_COORD sub_offset = offset;
-            DISPLAY_COORD sub_dims = dims;
-            if (x_offset.ok) {
-                sub_offset.x += x_offset.u.i;
-            }
-            if (y_offset.ok) {
-                sub_offset.y += y_offset.u.i;
-            }
-            if (width.ok) {
-                sub_dims.x = width.u.i;
-            }
-            if (height.ok) {
-                sub_dims.y = width.u.i;
-            }
-
-            printf("Drawing subsection %u\n", i);
-            draw_section(sub_box, sub_offset, sub_dims);
-            i++;
-        }
-    }
     toml_array_t *texts = toml_array_in(box, "text");
-    if (texts) {
-        int i = 0;
-        while (true) {
-            toml_table_t *text = toml_table_at(texts, i);
-            if (!text) {
-                break;
-            }
-            DISPLAY_COORD origin = offset;
-            DISPLAY_COORD bounds = dims;
-            DRAW_TEXT_FLAGS flags = 0;
-            EPAPER_DISPLAY_FONT_ID font_id = BITTER_PRO_10;
-            char *render_string = "";
-
-            toml_datum_t x_offset = toml_int_in(text, "x");
-            if (x_offset.ok) {
-                origin.x += x_offset.u.i;
-            }
-
-            toml_datum_t y_offset = toml_int_in(text, "y");
-            if (y_offset.ok) {
-                origin.y += y_offset.u.i;
-            }
-
-            toml_datum_t width = toml_int_in(text, "width");
-            if (width.ok) {
-                bounds.x = width.u.i;
-            }
-            toml_datum_t height = toml_int_in(text, "height");
-            if (height.ok) {
-                bounds.y = height.u.i;
-            }
-
-            toml_datum_t vert_center = toml_bool_in(text, "vertical_center");
-            if (vert_center.ok && vert_center.u.b) {
-                flags |= DRAW_TEXT_JUSTIFY_VERT_CENTER;
-            }
-            toml_datum_t bottom = toml_bool_in(text, "bottom");
-            if (bottom.ok && bottom.u.b) {
-                flags |= DRAW_TEXT_JUSTIFY_VERT_BOTTOM;
-            }
-            toml_datum_t horiz_center = toml_bool_in(text, "horizontal_center");
-            if (horiz_center.ok && horiz_center.u.b) {
-                flags |= DRAW_TEXT_JUSTIFY_HORIZ_CENTER;
-            }
-            toml_datum_t right = toml_bool_in(text, "right");
-            if (right.ok && right.u.b) {
-                flags |= DRAW_TEXT_JUSTIFY_HORIZ_RIGHT;
-            }
-            toml_datum_t font = toml_string_in(text, "font");
-            if (font.ok) {
-                int j = 0;
-                while (true) {
-                    const char *font_name = FONT_GetName(j);
-                    if (!font_name) {
-                        break;
-                    }
-                    if (strcmp(font_name, font.u.s) == 0) {
-                        font_id = j;
-                        break;
-                    }
-                    j++;
-                }
-            }
-
-            toml_datum_t value = toml_string_in(text, "value");
-            if (value.ok) {
-                render_string = value.u.s;
-            }
-
-            printf("Drawing text data: \n");
-            printf(" offset: %u , %u\n", origin.x, origin.y);
-            printf(" dimensions: %u , %u\n", bounds.x, bounds.y);
-            printf(" text: %s\n", render_string);
-            printf(" font: %s\n", FONT_GetName(font_id));
-            printf(" flags: %04x\n", flags);
-            DISPBUF_DrawMultiline(origin, render_string, font_id, bounds.x, bounds.y, flags);
-
-            i++;
-        }
+    if (!texts) {
+        return;
     }
+
+    int num_texts = toml_array_nelem(texts);
+
+    for (int i=0; i<num_texts; i++) {
+        toml_table_t *text = toml_table_at(texts, i);
+        if (!text) {
+            break;
+        }
+        DISPLAY_COORD origin = offset;
+        DISPLAY_COORD bounds = dims;
+        DRAW_TEXT_FLAGS flags = 0;
+        EPAPER_DISPLAY_FONT_ID font_id = BITTER_PRO_10;
+        char *render_string = "";
+
+        toml_datum_t x_offset = toml_int_in(text, "x");
+        if (x_offset.ok) {
+            origin.x += x_offset.u.i;
+        }
+
+        toml_datum_t y_offset = toml_int_in(text, "y");
+        if (y_offset.ok) {
+            origin.y += y_offset.u.i;
+        }
+
+        toml_datum_t width = toml_int_in(text, "width");
+        if (width.ok) {
+            bounds.x = width.u.i;
+        }
+        toml_datum_t height = toml_int_in(text, "height");
+        if (height.ok) {
+            bounds.y = height.u.i;
+        }
+
+        toml_datum_t vert_center = toml_bool_in(text, "vertical_center");
+        if (vert_center.ok && vert_center.u.b) {
+            flags |= DRAW_TEXT_JUSTIFY_VERT_CENTER;
+        }
+        toml_datum_t bottom = toml_bool_in(text, "bottom");
+        if (bottom.ok && bottom.u.b) {
+            flags |= DRAW_TEXT_JUSTIFY_VERT_BOTTOM;
+        }
+        toml_datum_t horiz_center = toml_bool_in(text, "horizontal_center");
+        if (horiz_center.ok && horiz_center.u.b) {
+            flags |= DRAW_TEXT_JUSTIFY_HORIZ_CENTER;
+        }
+        toml_datum_t right = toml_bool_in(text, "right");
+        if (right.ok && right.u.b) {
+            flags |= DRAW_TEXT_JUSTIFY_HORIZ_RIGHT;
+        }
+        toml_datum_t font = toml_string_in(text, "font");
+        if (font.ok) {
+            int j = 0;
+            while (true) {
+                const char *font_name = FONT_GetName(j);
+                if (!font_name) {
+                    break;
+                }
+                if (strcmp(font_name, font.u.s) == 0) {
+                    font_id = j;
+                    break;
+                }
+                j++;
+            }
+        }
+
+        toml_datum_t value = toml_string_in(text, "value");
+        if (value.ok) {
+            render_string = value.u.s;
+        }
+
+        DISPBUF_DrawMultiline(origin, render_string, font_id, bounds.x, bounds.y, flags);
+
+    }
+}
+
+void draw_symbols(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
 
     toml_array_t *symbols = toml_array_in(box, "symbol");
-    if (symbols) {
-        int i = 0;
-        while (true) {
-            toml_table_t *symbol = toml_table_at(symbols, i);
-            if (!symbol) {
-                break;
-            }
-            DISPLAY_COORD origin = offset;
-            int symbol_id = 0;
 
-            toml_datum_t x_offset = toml_int_in(symbol, "x");
-            if (x_offset.ok) {
-                origin.x += x_offset.u.i;
-            }
+    if (!symbols) {
+        return;
+    }
 
-            toml_datum_t y_offset = toml_int_in(symbol, "y");
-            if (y_offset.ok) {
-                origin.y += y_offset.u.i;
-            }
+    int num_symbols = toml_array_nelem(symbols);
 
-            toml_datum_t id = toml_int_in(symbol, "id");
-            if (id.ok) {
-                symbol_id = id.u.i;
-            }
+    for (int i=0; i<num_symbols; i++) {
+        toml_table_t *symbol = toml_table_at(symbols, i);
+        if (!symbol) {
+            break;
+        }
+        DISPLAY_COORD origin = offset;
+        int symbol_id = 0;
 
-            const FONT_CHARACTER *c = FONT_GetBitmap(SYSTEM_SYMBOLS, symbol_id);
-            if (c) {
-                printf("Drawing: %u, w:%u, h:%u\n", symbol_id, c->width, c->height);
-                DISPBUF_DrawBitmap(origin, c->width, c->height, c->data);
-            }
-            i++;
+        toml_datum_t x_offset = toml_int_in(symbol, "x");
+        if (x_offset.ok) {
+            origin.x += x_offset.u.i;
+        }
+
+        toml_datum_t y_offset = toml_int_in(symbol, "y");
+        if (y_offset.ok) {
+            origin.y += y_offset.u.i;
+        }
+
+        toml_datum_t id = toml_int_in(symbol, "id");
+        if (id.ok) {
+            symbol_id = id.u.i;
+        }
+
+        const FONT_CHARACTER *c = FONT_GetBitmap(SYSTEM_SYMBOLS, symbol_id);
+        if (c) {
+            DISPBUF_DrawBitmap(origin, c->width, c->height, c->data);
         }
     }
+}
+
+void draw_subsections(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
+
+    toml_array_t * sub_boxes = toml_array_in(box, "box");
+
+    if (!sub_boxes) {
+        return;
+    }
+
+    int num_boxes = toml_array_nelem(sub_boxes);
+
+    for (int i=0; i<num_boxes; i++) {
+        toml_table_t *sub_box = toml_table_at(sub_boxes, i);
+        if (!sub_box) {
+            continue;
+        }
+        toml_datum_t x_offset = toml_int_in(sub_box, "x");
+        toml_datum_t y_offset = toml_int_in(sub_box, "y");
+        toml_datum_t width = toml_int_in(sub_box, "width");
+        toml_datum_t height = toml_int_in(sub_box, "height");
+
+        DISPLAY_COORD sub_offset = offset;
+        DISPLAY_COORD sub_dims = dims;
+        if (x_offset.ok) {
+            sub_offset.x += x_offset.u.i;
+        }
+        if (y_offset.ok) {
+            sub_offset.y += y_offset.u.i;
+        }
+        if (width.ok) {
+            sub_dims.x = width.u.i;
+        }
+        if (height.ok) {
+            sub_dims.y = width.u.i;
+        }
+
+        void draw_section(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims);
+        draw_section(sub_box, sub_offset, sub_dims);
+    }
+}
+
+void draw_section(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
+    draw_texts(box, offset, dims);
+    draw_symbols(box, offset, dims);
+    draw_subsections(box, offset, dims);
 }
 
 void message_box_process(void* context, uint8_t *message, size_t length) {
