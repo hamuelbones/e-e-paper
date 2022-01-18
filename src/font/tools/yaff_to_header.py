@@ -52,6 +52,14 @@ def import_yaff(filename):
                 else:
                     character_data.append(line)
 
+    if parsing_character:
+        font_data[character] = {
+            "width": len(character_data[0]),
+            "height": len(character_data),
+            "comment": comment,
+            "data": character_data[:]
+        }
+
     return font_metadata, font_data
 
 
@@ -100,7 +108,7 @@ def export_header(filename, metadata, data):
 
         # table
         base = min(data.keys())
-        length = max(data.keys())-base
+        length = max(data.keys())-base+1
 
         f.write(f"\n\nstatic const FONT_CHARACTER * tab_{base_name}[] = {{\n")
         for i in range(base, base+length):

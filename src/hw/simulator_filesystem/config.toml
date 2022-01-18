@@ -5,6 +5,22 @@ url = "127.0.0.1:8000/device_api/message_box/6/responses"
 auth = true
 
 [render_root]
+	[[render_root.symbol]]
+		x = 50
+		y = 50
+		id = 0
+	[[render_root.symbol]]
+		x = 70
+		y = 50
+		id = 1
+	[[render_root.symbol]]
+		x = 50
+		y = 70
+		id = 2
+	[[render_root.symbol]]
+		x = 70
+		y = 70
+		id = 3
 	[[render_root.text]]
 		y = 100
 		width = 800

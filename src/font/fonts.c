@@ -4,6 +4,7 @@
 
 #include "fonts.h"
 
+#include "headers/system_symbols.h"
 #include "headers/bitter-ht-10.h"
 #include "headers/bitter-ht-14.h"
 #include "headers/bitter-ht-16.h"
@@ -14,6 +15,7 @@
 #include "headers/bitter-ht-48.h"
 
 const FONT_TABLE* fonts[FONT_MAX] = {
+        [SYSTEM_SYMBOLS] = &font_System_Symbols,
         [BITTER_PRO_10] = &font_Bitter_Pro_Regular_10,
         [BITTER_PRO_14] = &font_Bitter_Pro_Regular_14,
         [BITTER_PRO_16] = &font_Bitter_Pro_Regular_16,
@@ -25,6 +27,7 @@ const FONT_TABLE* fonts[FONT_MAX] = {
 };
 
 const char* font_names[FONT_MAX] = {
+        "SYSTEM_SYMBOLS",
         "BITTER_PRO_10",
         "BITTER_PRO_14",
         "BITTER_PRO_16",
@@ -42,7 +45,7 @@ const FONT_CHARACTER *FONT_GetBitmap(EPAPER_DISPLAY_FONT_ID id, int c) {
         return NULL;
     }
 
-    return font->characters[c];
+    return font->characters[c - font->code_base];
 }
 
 

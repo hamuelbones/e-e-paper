@@ -174,6 +174,41 @@ void draw_section(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
             i++;
         }
     }
+
+    toml_array_t *symbols = toml_array_in(box, "symbol");
+    if (symbols) {
+        int i = 0;
+        while (true) {
+            toml_table_t *symbol = toml_table_at(symbols, i);
+            if (!symbol) {
+                break;
+            }
+            DISPLAY_COORD origin = offset;
+            int symbol_id = 0;
+
+            toml_datum_t x_offset = toml_int_in(symbol, "x");
+            if (x_offset.ok) {
+                origin.x += x_offset.u.i;
+            }
+
+            toml_datum_t y_offset = toml_int_in(symbol, "y");
+            if (y_offset.ok) {
+                origin.y += y_offset.u.i;
+            }
+
+            toml_datum_t id = toml_int_in(symbol, "id");
+            if (id.ok) {
+                symbol_id = id.u.i;
+            }
+
+            const FONT_CHARACTER *c = FONT_GetBitmap(SYSTEM_SYMBOLS, symbol_id);
+            if (c) {
+                printf("Drawing: %u, w:%u, h:%u\n", symbol_id, c->width, c->height);
+                DISPBUF_DrawBitmap(origin, c->width, c->height, c->data);
+            }
+            i++;
+        }
+    }
 }
 
 void message_box_process(void* context, uint8_t *message, size_t length) {

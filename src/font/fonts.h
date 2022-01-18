@@ -8,7 +8,8 @@
 #include "font.h"
 
 typedef enum {
-    BITTER_PRO_10 = 0,
+    SYSTEM_SYMBOLS = 0,
+    BITTER_PRO_10,
     BITTER_PRO_14,
     BITTER_PRO_16,
     BITTER_PRO_20,
