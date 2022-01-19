@@ -3,7 +3,7 @@
 //
 
 #include "FreeRTOSConfig.h"
-#include "FreeRTOS.h"
+#include "freertos/FreeRTOS.h"
 #include "message_box_app.h"
 #include "filesystem_hal.h"
 

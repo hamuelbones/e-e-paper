@@ -5,6 +5,7 @@ if(SIMULATOR)
 else()
     idf_component_register(
             SRCS "message_box_app.c"
-            INCLUDE_DIRS "."
+            INCLUDE_DIRS "." "../"
+            REQUIRES hw display tomlc99 font
     )
 endif()
