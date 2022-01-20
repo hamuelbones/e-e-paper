@@ -9,9 +9,6 @@
 #include "driver/gpio.h"
 
 #define GPIO_DISPLAY_CS (GPIO_NUM_9)
-#define GPIO_DISPLAY_SCK (GPIO_NUM_0)
-#define GPIO_DISPLAY_MOSI (GPIO_NUM_1)
-#define GPIO_DISPLAY_MISO (GPIO_NUM_2)
 
 #define GPIO_DISPLAY_DC (GPIO_NUM_3)
 #define GPIO_DISPLAY_RST (GPIO_NUM_21)
@@ -69,18 +66,6 @@ void EPAPER_Init(void) {
     };
     gpio_config(&busy);
 
-    spi_bus_config_t busConfig = {
-            .miso_io_num = GPIO_DISPLAY_MISO,
-            .mosi_io_num = GPIO_DISPLAY_MOSI,
-            .sclk_io_num = GPIO_DISPLAY_SCK,
-            .quadhd_io_num = -1,
-            .quadwp_io_num = -1,
-            .max_transfer_sz = 5000,
-    };
-
-    esp_err_t ret = spi_bus_initialize(SPI2_HOST, &busConfig, SPI_DMA_CH_AUTO);
-    ESP_ERROR_CHECK(ret);
-
     spi_device_interface_config_t deviceConfig = {
             .mode = 0,
             .clock_speed_hz = 1*1000*1000,
@@ -88,7 +73,7 @@ void EPAPER_Init(void) {
             .queue_size = 4,
     };
 
-    ret = spi_bus_add_device(SPI2_HOST, &deviceConfig, &_handle);
+    esp_err_t ret = spi_bus_add_device(SPI2_HOST, &deviceConfig, &_handle);
     ESP_ERROR_CHECK(ret);
 
 }

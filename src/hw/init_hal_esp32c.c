@@ -8,12 +8,17 @@
 
 #include "nvs_flash.h"
 #include "driver/gpio.h"
+#include "driver/spi_master.h"
 
 
 #define GPIO_CHG_EN (GPIO_NUM_4)
 #define GPIO_CHG_PGOOD (GPIO_NUM_7)
 #define GPIO_CHG_STAT1 (GPIO_NUM_5)
 #define GPIO_CHG_STAT2 (GPIO_NUM_6)
+
+#define SPI_SCK (GPIO_NUM_0)
+#define SPI_MOSI (GPIO_NUM_1)
+#define SPI_MISO (GPIO_NUM_2)
 
 void HAL_Init(void) {
 
@@ -60,6 +65,20 @@ void HAL_Init(void) {
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    // Init SPI bus
+    spi_bus_config_t busConfig = {
+            .miso_io_num = SPI_MISO,
+            .mosi_io_num = SPI_MOSI,
+            .sclk_io_num = SPI_SCK,
+            .quadhd_io_num = -1,
+            .quadwp_io_num = -1,
+            .max_transfer_sz = 5000,
+    };
+
+    ret = spi_bus_initialize(SPI2_HOST, &busConfig, SPI_DMA_CH_AUTO);
+    ESP_ERROR_CHECK(ret);
+
 }
 
 void HAL_Print(const char *format, ...) {

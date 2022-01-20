@@ -89,6 +89,7 @@ static int _load_startup_file(void) {
 
     file_handle fh = FS_Open(STARTUP_FILENAME, "r");
     if (fh == NULL) {
+        printf("No TOML file!\n");
         return MAIN_STATE_INIT_ERROR;
     }
 
@@ -106,6 +107,7 @@ static int _load_startup_file(void) {
         return MAIN_STATE_INIT_ERROR;
     }
 
+    printf("Toml startup file loaded!\n");
     if (strcmp("standalone", mode.u.s) == 0) {
 
         // Standalone mode - we should expect config to already exist!
@@ -237,6 +239,7 @@ void _Noreturn app_main(void)
     MAIN_STATE current_state = MAIN_STATE_INIT;
 
     HAL_Init();
+    FS_Mount();
 
     toml_set_memutil(pvPortMalloc, vPortFree);
     toml_set_futil( FS_Feof, toml_fs_read);
