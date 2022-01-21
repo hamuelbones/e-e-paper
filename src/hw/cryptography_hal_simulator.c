@@ -8,15 +8,37 @@
 #include <openssl/evp.h>
 #include <openssl/conf.h>
 #include <string.h>
+#include "filesystem_hal.h"
+#include "FreeRTOSConfig.h"
+#include "freertos/FreeRTOS.h"
 
-void CRYPTOGRAPHY_Init(void) {
-    OPENSSL_add_all_algorithms_noconf();
-}
+//
+// Created by Samuel Jones on 1/9/22.
+//
+
+#include "cryptography_hal.h"
+
 
 static unsigned char _public_key[2048];
 static unsigned char _private_key[2048];
 
-void CRYPTOGRAPHY_RSA_Generate() {
+void cryptography_init(void) {
+    OPENSSL_add_all_algorithms_noconf();
+}
+
+
+bool cryptography_rsa_exists(const char* private_filename,
+                             const char* public_filename) {
+    struct stat s;
+    if (0 == FS_Stat(private_filename, &s) && 0 == FS_Stat(public_filename, &s)) {
+        return true;
+    }
+}
+
+// Generate a new set of RSA keys on the filesystem.
+bool cryptography_rsa_generate(const char *private_filename,
+                               const char *public_filename) {
+
     EVP_PKEY *key = EVP_RSA_gen(2048);
 
     BIO *public_out = BIO_new(BIO_s_mem());
@@ -29,63 +51,103 @@ void CRYPTOGRAPHY_RSA_Generate() {
     BIO_get_mem_ptr(public_out, &public_buf);
     BIO_get_mem_ptr(private_out, &private_buf);
 
-    // These now hold PEM encoded RSA keys!
-    memcpy(_public_key, public_buf->data, public_buf->length);
-    memcpy(_private_key, private_buf->data, private_buf->length);
+    FS_Remove(private_filename);
+    void* f = FS_Open(private_filename, "w");
+    if (!f) {
+        BIO_free(private_out);
+        BIO_free(public_out);
+        EVP_PKEY_free(key);
+        return false;
+    }
+    FS_Write(f, private_buf->data, (int) private_buf->length);
+    FS_Close(f);
 
+    FS_Remove(public_filename);
+    f = FS_Open(public_filename, "w");
+    if (!f) {
+        FS_Remove(private_filename);
+        BIO_free(private_out);
+        BIO_free(public_out);
+        EVP_PKEY_free(key);
+        return false;
+    }
+    FS_Write(f, public_buf->data, (int) public_buf->length);
+
+    BIO_free(private_out);
+    BIO_free(public_out);
     EVP_PKEY_free(key);
-
 }
 
-void CRYPTOGRAPHY_RSA_Sign() {
-#if 0
-    // Copied from an example!!!
+bool cryptography_digest_sha(const uint8_t *data,
+                             size_t len,
+                             size_t bits,
+                             uint8_t *output) {
 
-    EVP_PKEY_CTX *ctx;
-    /* md is a SHA-256 digest in this example. */
-    unsigned char *md, *sig;
-    size_t mdlen = 32, siglen;
-    EVP_PKEY *signing_key;
+    const EVP_MD *digest = NULL;
+    if (bits == 256) {
+        // Assumed 32 byte output
+        digest = EVP_sha256();
+    } else if (bits == 384) {
+        // 48 byte output
+        digest = EVP_sha384();
+    } else if (bits == 512) {
+        // 64 byte output
+        digest = EVP_sha512();
+    } else {
+        return false;
+    }
 
-    /*
-     * NB: assumes signing_key and md are set up before the next
-     * step. signing_key must be an RSA private key and md must
-     * point to the SHA-256 digest to be signed.
-     */
-    ctx = EVP_PKEY_CTX_new(signing_key, NULL /* no engine */);
-    if (!ctx)
-        /* Error occurred */
-        if (EVP_PKEY_sign_init(ctx) <= 0)
-            /* Error */
-            if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING) <= 0)
-                /* Error */
-                if (EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256()) <= 0)
-                    /* Error */
+    EVP_MD_CTX * md_ctx = EVP_MD_CTX_new();
+    EVP_DigestInit(md_ctx, digest);
+    EVP_DigestUpdate(md_ctx, data, len);
+    EVP_DigestFinal(md_ctx, output, NULL);
 
-                    /* Determine buffer length */
-                    if (EVP_PKEY_sign(ctx, NULL, &siglen, md, mdlen) <= 0)
-                        /* Error */
-
-                        sig = OPENSSL_malloc(siglen);
-
-    if (!sig)
-        /* malloc failure */
-
-        if (EVP_PKEY_sign(ctx, sig, &siglen, md, mdlen) <= 0) {}
-    /* Error */
-
-    /* Signature is siglen bytes written to buffer sig */
-#endif
+    return true;
 }
 
-void CRYPTOGRAPHY_RSA_Verify() {
+bool cryptography_sign_rsa(const char* private_filename,
+                           const uint8_t *data,
+                           size_t len,
+                           uint8_t **output,
+                           size_t *output_len) {
 
-}
+    if (len != 32) {
+        return false;
+    }
 
-void CRYPTOGRAPHY_RSA_HasKey() {
+    void* f = FS_Open(private_filename, "r");
+    if (!f) {
+        return false;
+    }
+    FS_Read(f, _private_key, 2048);
+    FS_Close(f);
 
-}
+    BIO *key_bio = BIO_new_mem_buf(_private_key, -1);
 
-void CRYPTOGRAPHY_SHA256_Digest() {
+    EVP_PKEY *key =  NULL;
+    PEM_read_bio_PrivateKey(key_bio, &key, NULL, NULL);
+    BIO_free(key_bio);
 
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(key, NULL /* no engine */);
+    EVP_PKEY_sign_init(ctx);
+    EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING);
+    EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256());
+
+    // To get signature length
+    EVP_PKEY_sign(ctx, NULL, output_len, data, len);
+
+    if (*output_len == 0) {
+        printf("Sig generation failed\n");
+        EVP_PKEY_free(key);
+        EVP_PKEY_CTX_free(ctx);
+        return false;
+    }
+
+    *output = pvPortMalloc(*output_len);
+
+    int retval = EVP_PKEY_sign(ctx, *output, output_len, data, len);
+    EVP_PKEY_free(key);
+    EVP_PKEY_CTX_free(ctx);
+
+    return retval == 0;
 }

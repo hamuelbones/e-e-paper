@@ -18,6 +18,7 @@
 #include "bluetooth_task.h"
 #include "filesystem_hal.h"
 #include "toml.h"
+#include "cryptography_hal.h"
 
 #include "apps.h"
 #include "message_box_app.h"
@@ -240,6 +241,23 @@ void _Noreturn app_main(void)
 
     HAL_Init();
     FS_Mount();
+
+    cryptography_init();
+    if (!cryptography_rsa_exists("private.pem", "public.pem")) {
+        cryptography_rsa_generate("private.pem", "public.pem");
+    }
+
+    const char* shatest = "asdfasdfasdfasdfasdf;jlkasldkjglaj;sdlfjasldkjg";
+    uint8_t digest[32] = {0};
+    cryptography_digest_sha((const uint8_t*) shatest, strlen(shatest), 256, digest);
+
+    printf("Tested SHA\n");
+
+    uint8_t *output = NULL;
+    size_t output_len = 0;
+    cryptography_sign_rsa("private.pem", digest, 32, &output, &output_len);
+
+    printf("output: %p, %zu\n", output, output_len);
 
     toml_set_memutil(pvPortMalloc, vPortFree);
     toml_set_futil( FS_Feof, toml_fs_read);

@@ -15,8 +15,7 @@
 #include <stdbool.h>
 
 void HAL_Init(void) {
-    CRYPTOGRAPHY_Init();
-    CRYPTOGRAPHY_RSA_Generate();
+
 }
 
 void HAL_Print(const char *format, ...) {
