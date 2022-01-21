@@ -149,5 +149,5 @@ bool cryptography_sign_rsa(const char* private_filename,
     EVP_PKEY_free(key);
     EVP_PKEY_CTX_free(ctx);
 
-    return retval == 0;
+    return retval == 1;
 }
