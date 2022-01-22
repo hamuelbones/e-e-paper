@@ -74,8 +74,8 @@ WIFI_HTTP_REQ_ID WIFI_HttpGet(const char* host,
     BIO_write(bio, line, len);
     BIO_puts(bio, "Connection: close\r\n");
     for (size_t i = 0; i<header_count; i++) {
-        len = snprintf(line, 200, "%s\r\n", headers[i]);
-        BIO_write(bio, line, len);
+        BIO_puts(bio, headers[i]);
+        BIO_puts(bio, "\r\n");
     }
     BIO_puts(bio, "\r\n");
     BIO_flush(bio);
