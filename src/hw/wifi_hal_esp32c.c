@@ -3,16 +3,14 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+#include "wifi_hal.h"
 
 #include "esp_event_base.h"
 #include "esp_event.h"
 #include "esp_wifi.h"
+#include "esp_http_client.h"
 
-
-/* FreeRTOS event group to signal when we are connected*/
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-static EventGroupHandle_t s_wifi_event_group;
+static EventGroupHandle_t _message_buffer;
 
 static int s_retry_num = 0;
 
@@ -26,18 +24,23 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             esp_wifi_connect();
             s_retry_num++;
         } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            char message = WIFI_HAL_CONNECTION_FAILED;
+            xMessageBufferSend(_message_buffer, &message, 1, portMAX_DELAY);
         }
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         s_retry_num = 0;
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+
+        char message = WIFI_HAL_CONNECTED;
+        xMessageBufferSend(_message_buffer, &message, 1, portMAX_DELAY);
     }
 }
 
 
 
-void WIFI_Init(void) {
+void WIFI_Init(MessageBufferHandle_t message_buffer) {
+
+    _message_buffer = message_buffer;
 
     ESP_ERROR_CHECK(esp_netif_init());
 
@@ -68,7 +71,7 @@ void WIFI_Connect(const char* ssid, const char* password) {
                     /* Setting a password implies station will connect to all security modes including WEP/WPA.
                      * However these modes are deprecated and not advisable to be used. Incase your Access point
                      * doesn't support WPA2, these mode can be enabled by commenting below line */
-                    .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+                    .threshold.authmode =  password != NULL ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN,
 
                     .pmf_cfg = {
                             .capable = true,
@@ -81,31 +84,5 @@ void WIFI_Connect(const char* ssid, const char* password) {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
     ESP_ERROR_CHECK(esp_wifi_start() );
-
-
-    s_wifi_event_group = xEventGroupCreate();
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-                                           pdFALSE,
-                                           pdFALSE,
-                                           portMAX_DELAY);
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        printf("connected to network!!\n");
-    } else if (bits & WIFI_FAIL_BIT) {
-        printf("failed to connect to network... :(\n");
-    } else {
-        printf("Error :/\n");
-    }
-
-
-    /* The event will not be processed after unregister */
-    /*
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
-    vEventGroupDelete(s_wifi_event_group);
-     */
 
 }

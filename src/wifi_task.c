@@ -8,6 +8,16 @@
 #include "jwt.h"
 #include <printf.h>
 
+
+typedef enum {
+    WIFI_STATE_INIT,
+
+    WIFI_STATE_CONNECT,
+
+
+};
+
+
 static TaskHandle_t _wifiHandle;
 
 bool _generate_jwt_signature_rsa(void* params, const uint8_t *message, size_t len, uint8_t** signature, size_t *sig_len) {
@@ -17,8 +27,13 @@ bool _generate_jwt_signature_rsa(void* params, const uint8_t *message, size_t le
 }
 
 static char cur_jwt[2000];
+static MessageBufferHandle_t _WifiMessageBuffer;
+
+#define WIFI_MESSAGE_SIZE (20)
+
 void _Noreturn wifi_task(void* params) {
 
+#if 0
     vTaskDelay(10);
 
     // Test JWT!
@@ -29,12 +44,23 @@ void _Noreturn wifi_task(void* params) {
     printf("Token: %s\n", cur_jwt);
 
     jwt_destroy(jwt);
+#endif
 
-    WIFI_Init();
+    _WifiMessageBuffer = xMessageBufferCreate(50);
+
+    WIFI_Init(_WifiMessageBuffer);
     WIFI_Connect("ham", "smokyradio");
 
+    WIFI_HttpGet("127.0.0.1:8000",
+                 "/",
+                 NULL,
+                 0);
+
     while (1) {
-        vTaskDelay(1000 * 1000 / configTICK_RATE_HZ);
+
+        uint8_t inbound_message[WIFI_MESSAGE_SIZE] = {0};
+        xMessageBufferReceive(_WifiMessageBuffer, inbound_message, WIFI_MESSAGE_SIZE, portMAX_DELAY);
+
     }
 }
 

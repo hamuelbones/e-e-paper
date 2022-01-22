@@ -34,15 +34,6 @@ void HAL_Print(const char *format, ...) {
     va_end(args);
 }
 
-
-void WIFI_Init(void) {
-
-}
-void WIFI_Connect(const char* ssid, const char* password) {
-
-}
-
-
 #define CANVAS_HEIGHT 480
 #define CANVAS_WIDTH 800
 uint8_t gtk_buffer[CANVAS_HEIGHT * CANVAS_WIDTH * 3];
