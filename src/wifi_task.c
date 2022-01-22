@@ -57,6 +57,8 @@ void _Noreturn wifi_task(void* params) {
             cur_jwt
     };
 
+    WIFI_GetNetworkTime("us.pool.ntp.org");
+
     WIFI_HttpGet("127.0.0.1:8000",
                  "/dev_api/",
                  (const char **) headers,

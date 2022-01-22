@@ -15,6 +15,7 @@ typedef enum {
 #define INVALID_HTTP_REQ_ID (-1)
 typedef int WIFI_HTTP_REQ_ID;
 
+
 void WIFI_Init(MessageBufferHandle_t message_buffer);
 
 void WIFI_Connect(const char* ssid, const char* password);
@@ -23,4 +24,4 @@ WIFI_HTTP_REQ_ID WIFI_HttpGet(const char* host,
                               const char** headers,
                               size_t header_count);
 
-WIFI_HTTP_REQ_ID WIFI_StartHTTPRequest();
+WIFI_HTTP_REQ_ID WIFI_GetNetworkTime(const char* host);
