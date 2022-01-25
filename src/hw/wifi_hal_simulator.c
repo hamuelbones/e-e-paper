@@ -3,6 +3,7 @@
 //
 
 #include "wifi_hal.h"
+#include "filesystem_hal.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/bio.h>
@@ -15,30 +16,25 @@
 #include <netdb.h>
 
 
-static MessageBufferHandle_t _message_buffer;
 static SSL_CTX *ssl;
-static uint8_t _response_data[4001];
-static size_t _response_size;
 
-void WIFI_Init(MessageBufferHandle_t message_buffer) {
-    _message_buffer = message_buffer;
+void WIFI_Init(void) {
 
     SSL_library_init();
     SSL_load_error_strings();
     ssl = SSL_CTX_new(TLS_client_method());
 }
 
-void WIFI_Connect(const char* ssid, const char* password) {
+bool WIFI_Connect(const char* ssid, const char* password) {
+    return true;
+}
 
-    char message = WIFI_HAL_CONNECTED;
-    xMessageBufferSend(_message_buffer, &message, 1, portMAX_DELAY);
-
+bool WIFI_Connected(void) {
+    return true;
 }
 
 void WIFI_Disconnect() {
 
-    char message = WIFI_HAL_DISCONNECTED;
-    xMessageBufferSend(_message_buffer, &message, 1, portMAX_DELAY);
 }
 
 void error( char* msg )
@@ -49,7 +45,7 @@ void error( char* msg )
 }
 #define NTP_TIMESTAMP_DELTA 2208988800ull
 
-WIFI_HTTP_REQ_ID WIFI_GetNetworkTime(const char* host) {
+uint32_t WIFI_GetNetworkTime(const char* host) {
 
     // From https://github.com/lettier/ntpclient/blob/master/source/c/main.c
     int sockfd, n; // Socket file descriptor and the n return result from writing/reading from the socket.
@@ -167,15 +163,24 @@ WIFI_HTTP_REQ_ID WIFI_GetNetworkTime(const char* host) {
 
     time_t txTm = ( time_t ) ( packet.txTm_s - NTP_TIMESTAMP_DELTA );
 
-    // Print the time we got from the server, accounting for local timezone and conversion from UTC time.
-
-    printf( "Time: %s", ctime( ( const time_t* ) &txTm ) );
+    return (uint32_t) txTm;
 }
 
-WIFI_HTTP_REQ_ID WIFI_HttpGet(const char* host,
-                              const char* subdirectory,
-                              const char** headers,
-                              size_t header_count) {
+typedef enum {
+    PARSE_RESPONSE_CODE,
+    PARSE_HEADERS,
+    PARSE_RESPONSE,
+} HTTP_PARSE_STATE;
+
+
+bool WIFI_HttpGet(const char* host,
+                  const char* subdirectory,
+                  const char** headers,
+                  size_t header_count,
+
+                  const char* headers_filename,
+                  const char* response_filename,
+                  int *status) {
 
     BIO * bio = BIO_new_ssl_connect(ssl);
     SSL * thisSSL;
@@ -193,14 +198,14 @@ WIFI_HTTP_REQ_ID WIFI_HttpGet(const char* host,
         printf("Failed connection %d\n", result);
         ERR_print_errors_fp(stderr);
         BIO_free_all(bio);
-        return INVALID_HTTP_REQ_ID;
+        return false;
     }
 
     if(BIO_do_handshake(bio) <= 0) {
         fprintf(stderr, "Error establishing SSL connection\n");
         ERR_print_errors_fp(stderr);
         BIO_free_all(bio);
-        return INVALID_HTTP_REQ_ID;
+        return false;
     }
 
     char line[200] = {0};
@@ -217,31 +222,98 @@ WIFI_HTTP_REQ_ID WIFI_HttpGet(const char* host,
     BIO_puts(bio, "\r\n");
     BIO_flush(bio);
 
-    _response_size = 0;
     int max_stall_count = 1000;
     int stall_count = 0;
     int us_per_count = 1000;
+
+    HTTP_PARSE_STATE state = PARSE_RESPONSE_CODE;
+
+    char response_data[128];
+
+    size_t line_len = 0;
+    bool http_version_complete = false;
+    bool http_status_complete = false;
+
+    *status = 0;
+
+    file_handle header_file = NULL;
+    file_handle response_file = NULL;
+
     while (1) {
-        int size = BIO_read(bio, &_response_data[_response_size], 4000-_response_size);
+        int size = BIO_read(bio, response_data, 128);
 
         if (size > 0) {
-            _response_size += size;
             stall_count = 0;
         } else {
-            stall_count++;
-            if (stall_count >= max_stall_count) {
+            if (stall_count++ >= max_stall_count) {
                 break;
             }
             usleep(us_per_count);
             continue;
         }
 
-        if (_response_size >= 4000) {
-            break;
+        // Sort of hacky, perhaps parse better in the future or use a library
+        for (int i=0; i<size; i++) {
+            char c = response_data[i];
+            line_len++;
+
+            switch (state) {
+                case PARSE_RESPONSE_CODE:
+                    // We will be here for the first line.
+                    if (c == ' ') {
+                        // First space: next value is HTTP status code
+                        if (!http_version_complete) {
+                            http_version_complete = true;
+                        } else {
+                            http_status_complete = true;
+                        }
+                    } else {
+                        if (http_version_complete && !http_status_complete) {
+                            *status = (*status * 10);
+                            *status += c - '0';
+                        }
+                    }
+
+                    if (c == '\n') {
+                        state = PARSE_HEADERS;
+                        if (headers_filename) {
+                            FS_Remove(headers_filename);
+                            header_file = FS_Open(headers_filename, "w");
+                        }
+                    }
+                    break;
+                case PARSE_HEADERS:
+                    if (header_file) {
+                        FS_Write(header_file, &c, 1);
+                    }
+                    if (c == '\n' && line_len <= 2) {
+                        state = PARSE_RESPONSE;
+                        if (header_file) {
+                            FS_Close(header_file);
+                        }
+                        if (response_filename) {
+                            FS_Remove(response_filename);
+                            response_file = FS_Open(response_filename, "w");
+                        }
+                    }
+
+                    break;
+                case PARSE_RESPONSE:
+                    if (response_file) {
+                        FS_Write(response_file, &c, 1);
+                    }
+                    break;
+            }
+
+            if (c == '\n') {
+                line_len = 0;
+            }
         }
     }
-    _response_data[_response_size] = '\0';
-    printf("%s\n\n", _response_data);
+    if (response_file) {
+        FS_Close(response_file);
+    }
 
     BIO_free_all(bio);
+    return true;
 }

@@ -1,27 +1,22 @@
 
-#include "FreeRTOSConfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/message_buffer.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 
-typedef enum {
-    WIFI_HAL_CONNECTED,
-    WIFI_HAL_CONNECTION_FAILED,
-    WIFI_HAL_DISCONNECTED,
+void WIFI_Init(void);
 
-    WIFI_HAL_HTTP_RESPONSE,
-    WIFI_HAL_HTTP_ERROR,
-} WIFI_HAL_MESSAGE;
+bool WIFI_Connect(const char* ssid, const char* password);
+void WIFI_Disconnect(void);
 
-#define INVALID_HTTP_REQ_ID (-1)
-typedef int WIFI_HTTP_REQ_ID;
+bool WIFI_HttpGet(const char* host,
+                  const char* subdirectory,
+                  const char** headers,
+                  size_t header_count,
 
+                  const char* headers_filename,
+                  const char* response_filename,
+                  int *status);
 
-void WIFI_Init(MessageBufferHandle_t message_buffer);
+bool WIFI_Connected(void);
 
-void WIFI_Connect(const char* ssid, const char* password);
-WIFI_HTTP_REQ_ID WIFI_HttpGet(const char* host,
-                              const char* subdirectory,
-                              const char** headers,
-                              size_t header_count);
-
-WIFI_HTTP_REQ_ID WIFI_GetNetworkTime(const char* host);
+uint32_t WIFI_GetNetworkTime(const char* host);

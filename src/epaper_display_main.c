@@ -15,10 +15,13 @@
 
 #include "wifi_task.h"
 #include "display_task.h"
-#include "bluetooth_task.h"
 #include "filesystem_hal.h"
 #include "toml.h"
 #include "cryptography_hal.h"
+#include "file_utils.h"
+#include "toml_resources.h"
+#include "cryptography_hal.h"
+#include "jwt.h"
 
 #include "apps.h"
 #include "message_box_app.h"
@@ -32,30 +35,42 @@
 
 #define STARTUP_FILENAME "startup.toml"
 #define APP_CONFIG_FILENAME "config.toml"
+#define REQUEST_TEMPORARY_FILENAME "temp.bin"
+
+#define SD_MOUNT_POINT "/sd/"
+#define INTERNAL_MOUNT_POINT "/int/"
 
 #define AUTHOR_SUBSTITUTION_VALUE "!!MSG_BOX_AUTHOR!!"
 #define MESSAGE_SUBSTITUTION_VALUE "!!MSG_BOX_MESSAGE!!"
 
 
 typedef enum {
-    // Checj startup configuration
+    // Check startup configuration
     MAIN_STATE_INIT,
+    // TODO display something here
     MAIN_STATE_INIT_ERROR,
-    // Safe mode - don't load anything
+    // Safe mode - don't load anything. TODO Go here if we're in some sort of bootloop
     MAIN_STATE_SAFE,
     // WiFi Connection
     MAIN_STATE_CONNECT,
-    // Checking / getting auth to the server
-    MAIN_STATE_AUTHENTICATION,
-    //
+    // Get time
+    MAIN_STATE_SYNC_TIME,
+    // Getting config.toml from the server
     MAIN_STATE_REFRESH_CONFIG,
+    // Getting resources described in the config.toml
+    MAIN_STATE_REFRESH_RESOURCES,
     MAIN_STATE_RUN_APP,
     MAIN_STATE_MAX,
 } MAIN_STATE;
 
 typedef enum {
     MAIN_MESSAGE_LOAD_STARTUP,
-    MAIN_MESSAGE_REFRESH_READY,
+    MAIN_MESSAGE_WIFI_CONNECTED,
+    MAIN_MESSAGE_WIFI_CONNECT_FAILED,
+    MAIN_MESSAGE_TIME_SYNCED,
+    MAIN_MESSAGE_TIME_SYNC_FAILED,
+    MAIN_MESSAGE_CONFIG_READY,
+    MAIN_MESSAGE_RESOURCE_READY,
     MAIN_MESSAGE_APP_INIT,
     MAIN_MESSAGE_APP,
 } MAIN_STATE_MESSAGE;
@@ -66,8 +81,6 @@ typedef enum {
 } MAIN_APP_MESSAGE;
 
 static MessageBufferHandle_t message_buffer;
-toml_table_t *startup_config;
-toml_table_t *device_config;
 
 static const APP_INTERFACE *_apps[NUMBER_OF_APPS] = {
     &g_message_box_interface
@@ -75,31 +88,96 @@ static const APP_INTERFACE *_apps[NUMBER_OF_APPS] = {
 static const APP_INTERFACE *_currentApp = NULL;
 static void* _currentAppContext = NULL;
 static xTimerHandle _currentAppTimer = NULL;
+static bool standalone = false;
+
+static char cur_jwt[600];
+
+bool _generate_jwt_signature_rsa(void* params, const uint8_t *message, size_t len, uint8_t** signature, size_t *sig_len) {
+    uint8_t sha_result[32];
+    cryptography_digest_sha(message, len, 256, sha_result);
+    return cryptography_sign_rsa("private.pem", sha_result, 32, signature, sig_len);
+}
 
 static void _app_timer_callback(TimerHandle_t timer) {
     uint8_t message[2] = {MAIN_MESSAGE_APP, MAIN_APP_TIMER_PROC};
     xMessageBufferSend(message_buffer, &message, 2, 0);
 }
 
-static int _load_startup_file(void) {
+static void _handle_connection(void* params, void* response) {
+    WIFI_CONNECT_RESPONSE *connect = response;
+    uint8_t message[1] = {MAIN_MESSAGE_WIFI_CONNECTED};
+    if (!connect->connected) {
+        message[1] = MAIN_MESSAGE_WIFI_CONNECT_FAILED;
+    }
+    xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
+}
 
-    if (startup_config) {
-        toml_free(startup_config);
-        startup_config = NULL;
+static void _handle_time_synced(void* params, void* response) {
+    WIFI_SYNC_TIME_RESPONSE *sync_time = response;
+
+    uint8_t message[1] = {MAIN_MESSAGE_TIME_SYNCED};
+    if (!sync_time->unix_time) {
+        message[1] = MAIN_MESSAGE_TIME_SYNC_FAILED;
+    }
+    xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
+}
+
+static void _handle_config_refresh(void* params, void* response) {
+    WIFI_GET_RESPONSE *get = response;
+
+    uint8_t message[3] = {MAIN_MESSAGE_CONFIG_READY, get->status & 0xFF, get->status>>8 & 0xFF};
+    xMessageBufferSend(message_buffer, &message, 3, portMAX_DELAY);
+
+    // Nothing dynamically allocated, nothing to clean up.
+}
+
+
+static void _issue_get_request(const char* host, const char* subdirectory, const char* destination, bool use_jwt) {
+
+    WIFI_REQUEST request = {
+            .type = WIFI_GET,
+            .cb = _handle_config_refresh,
+            .get = {
+                    .host = host,
+                    .subdirectory = subdirectory,
+                    .headers = NULL,
+                    .header_count = 0,
+                    .headers_filename = NULL,
+                    .response_filename = destination,
+            },
+    };
+
+    if (use_jwt) {
+        request.get.headers = (char **) &cur_jwt;
+        request.get.header_count = 1;
     }
 
-    file_handle fh = FS_Open(STARTUP_FILENAME, "r");
-    if (fh == NULL) {
-        printf("No TOML file!\n");
+    // Provide context struct back so we can clean up
+    request.cb_params = &request.get;
+}
+
+
+static int _load_startup_file(void) {
+
+    // save settings From SD if it exists.
+    if (file_exists(SD_MOUNT_POINT STARTUP_FILENAME)) {
+        file_copy(INTERNAL_MOUNT_POINT STARTUP_FILENAME, SD_MOUNT_POINT STARTUP_FILENAME);
+    }
+
+    if (!file_exists(INTERNAL_MOUNT_POINT STARTUP_FILENAME)) {
+        printf("No TOML file in internal storage!\n");
         return MAIN_STATE_INIT_ERROR;
     }
 
-    char toml_error_msg[100];
-    startup_config = toml_parse_file(fh, toml_error_msg, 100);
-    FS_Close(fh);
+    if (!toml_resource_load(INTERNAL_MOUNT_POINT STARTUP_FILENAME, "startup")) {
+        printf("Failed to load startup TOML\n");
+        return MAIN_STATE_INIT_ERROR;
+    }
+
+    toml_table_t *startup_config = toml_resource_get("startup");
     if (!startup_config) {
-         printf("Toml file load error: %s\n", toml_error_msg);
-         return MAIN_STATE_INIT_ERROR;
+        printf("Failed to load startup TOML from resource list\n");
+        return MAIN_STATE_INIT_ERROR;
     }
 
     toml_datum_t mode = toml_string_in(startup_config, "mode");
@@ -110,30 +188,22 @@ static int _load_startup_file(void) {
 
     printf("Toml startup file loaded!\n");
     if (strcmp("standalone", mode.u.s) == 0) {
-
+        standalone = true;
         // Standalone mode - we should expect config to already exist!
-        uint8_t message = MAIN_MESSAGE_REFRESH_READY;
+        uint8_t message = MAIN_MESSAGE_CONFIG_READY;
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
 
         return MAIN_STATE_REFRESH_CONFIG;
     } else if (strcmp("online", mode.u.s) == 0) {
         // Online mode - we should connect to WiFi
-        toml_array_t* wifi_credentials = toml_array_in(startup_config, "wifi");
-        int num_wifi_aps = toml_array_nelem(wifi_credentials);
-        for (int i=0; i<num_wifi_aps; i++) {
-            toml_table_t *current_creds = toml_table_at(wifi_credentials, i);
+        standalone = false;
+        WIFI_REQUEST request = {
+            .type = WIFI_CONNECT,
+            .cb = _handle_connection,
+        };
+        xMessageBufferSend(wifi_message_buffer(), &request, sizeof(request), portMAX_DELAY);
 
-            toml_datum_t ssid = toml_string_in(current_creds, "ssid");
-            toml_datum_t password = toml_string_in(current_creds, "password");
 
-            if (!ssid.ok || !password.ok) {
-                return MAIN_STATE_INIT_ERROR;
-            }
-
-            printf("loaded wifi credentials: %s, %s\n", ssid.u.s, password.u.s);
-        }
-
-        // TODO Send message to connect with credentials to Wifi Task
         return MAIN_STATE_CONNECT;
     } else {
         printf("Unknown run mode\n");
@@ -144,23 +214,14 @@ static int _load_startup_file(void) {
 
 static int _load_config_file(void) {
 
-    if (device_config) {
-        toml_free(device_config);
-        device_config = NULL;
-    }
-
-    file_handle fh = FS_Open(APP_CONFIG_FILENAME, "r");
-    if (fh == NULL) {
-        return MAIN_STATE_INIT_ERROR;
-    }
-
-    char toml_error_msg[100];
-    device_config = toml_parse_file(fh, toml_error_msg, 100);
-    FS_Close(fh);
+    toml_resource_load(INTERNAL_MOUNT_POINT APP_CONFIG_FILENAME, "config");
+    toml_table_t *device_config = toml_resource_get("config");
     if (!device_config) {
-        printf("Toml file load error: %s\n", toml_error_msg);
+        printf("Toml config file load error\n");
         return MAIN_STATE_INIT_ERROR;
     }
+
+    printf("TOML configuration file loaded \n");
 
     uint8_t message = MAIN_MESSAGE_APP_INIT;
     xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
@@ -178,13 +239,100 @@ static int _state_init(uint8_t *message, size_t len)  {
     return -1;
 }
 
+static int _state_connect(uint8_t *message, size_t len) {
+    switch(message[0]) {
+        case MAIN_MESSAGE_WIFI_CONNECTED: {
+
+            // Generate JWT in preparation for connection
+            JWT_CTX *jwt = jwt_new("RS256", 1642824154, 1000, _generate_jwt_signature_rsa, NULL);
+            jwt_add_string(jwt, JWT_HEADER, "kid", "6F8D5846-FA83-46F7-8007-60C0414A5518");
+            strcpy(cur_jwt, "Authorization: Bearer ");
+            size_t offset = strlen(cur_jwt);
+            size_t token_size = jwt_serialize(jwt, cur_jwt+offset, 600-offset);
+            printf("Token size: %zu\n", token_size);
+            printf("%s\n", cur_jwt);
+
+            jwt_destroy(jwt);
+
+            // Now sync time
+            WIFI_REQUEST request = {
+                    .type = WIFI_SYNC_TIME,
+                    .cb = _handle_time_synced,
+                    .sync_time.url = "time.nist.gov",
+            };
+
+            xMessageBufferSend(wifi_message_buffer(), &request, sizeof(request), portMAX_DELAY);
+        }
+            // NEXT THING: Send message to wifi task!
+            return MAIN_STATE_SYNC_TIME;
+        case MAIN_MESSAGE_WIFI_CONNECT_FAILED:
+            return MAIN_STATE_INIT_ERROR;
+    }
+    return -1;
+}
+
+
+static int _state_refresh_time(uint8_t *message, size_t len) {
+    switch(message[0]) {
+        case MAIN_MESSAGE_TIME_SYNCED: {
+
+            WIFI_REQUEST request = {
+                    .type = WIFI_GET,
+                    .cb = _handle_config_refresh,
+                    .get = {
+                            .host = "",
+                            .subdirectory = "",
+                            .headers = NULL,
+                            .header_count = 0,
+                            .headers_filename = NULL,
+                            .response_filename = NULL,
+                    },
+            };
+
+            xMessageBufferSend(wifi_message_buffer(), &request, sizeof(request), portMAX_DELAY);
+        }
+            return MAIN_STATE_REFRESH_CONFIG;
+        case MAIN_MESSAGE_TIME_SYNC_FAILED:
+            return MAIN_STATE_SYNC_TIME;
+    }
+}
+
 static int _state_refresh_config(uint8_t *message, size_t len) {
     switch(message[0]) {
-        case MAIN_MESSAGE_REFRESH_READY:
-            return _load_config_file();
+        case MAIN_MESSAGE_CONFIG_READY: {
+            int16_t status = -1;
+            if (!standalone && len >= 2) {
+                status = message[0] | (message[1] << 8);
+                printf("Config refresh status: %u", status);
+            }
+
+            if (status == 200) {
+                // Move file to correct location on SD
+                FS_Remove(SD_MOUNT_POINT APP_CONFIG_FILENAME);
+                FS_Rename(SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, SD_MOUNT_POINT APP_CONFIG_FILENAME);
+            }
+
+            // Move file from SD to internal
+            if (file_exists(SD_MOUNT_POINT APP_CONFIG_FILENAME)) {
+                file_copy(INTERNAL_MOUNT_POINT APP_CONFIG_FILENAME, SD_MOUNT_POINT APP_CONFIG_FILENAME);
+            }
+
+            // May load resources if necessary
+            int next_state = _load_config_file();
+            if (standalone && (next_state == MAIN_STATE_REFRESH_RESOURCES)) {
+                // Should not hit network in standalone mode!
+                next_state = MAIN_STATE_RUN_APP;
+            }
+
+            return next_state;
+        }
         default:
             break;
     }
+    return -1;
+}
+
+static int _state_refresh_resources(uint8_t *message, size_t len) {
     return -1;
 }
 
@@ -194,6 +342,8 @@ static int _state_run_app(uint8_t *message, size_t len) {
             _currentApp = NULL;
             toml_table_t *app_info = toml_table_in(device_config, "application");
             toml_datum_t app_name = toml_string_in(app_info, "name");
+
+            toml_table_t *startup_config = toml_resource_get("startup");
 
             for (int i=0; i<NUMBER_OF_APPS; i++) {
                 if (strcmp(app_name.u.s, _apps[i]->name) == 0) {
@@ -226,7 +376,12 @@ static int _state_run_app(uint8_t *message, size_t len) {
 
 static int (*_main_states[MAIN_STATE_MAX])(uint8_t * message, size_t len) = {
         [MAIN_STATE_INIT] = _state_init,
+        // Init Error
+        // Safe Mode
+        [MAIN_STATE_CONNECT] = _state_connect,
+        [MAIN_STATE_SYNC_TIME] = _state_refresh_time,
         [MAIN_STATE_REFRESH_CONFIG] = _state_refresh_config,
+        [MAIN_STATE_REFRESH_RESOURCES] = _state_refresh_resources,
         [MAIN_STATE_RUN_APP] = _state_run_app,
 };
 
@@ -247,18 +402,6 @@ void _Noreturn app_main(void)
         cryptography_rsa_generate("private.pem", "public.pem");
     }
 
-    const char* shatest = "asdfasdfasdfasdfasdf;jlkasldkjglaj;sdlfjasldkjg";
-    uint8_t digest[32] = {0};
-    cryptography_digest_sha((const uint8_t*) shatest, strlen(shatest), 256, digest);
-
-    printf("Tested SHA\n");
-
-    uint8_t *output = NULL;
-    size_t output_len = 0;
-    cryptography_sign_rsa("private.pem", digest, 32, &output, &output_len);
-
-    printf("output: %p, %zu\n", output, output_len);
-
     toml_set_memutil(pvPortMalloc, vPortFree);
     toml_set_futil( FS_Feof, toml_fs_read);
 
@@ -273,7 +416,7 @@ void _Noreturn app_main(void)
         size_t rx_size = xMessageBufferReceive(message_buffer, inbound_message, MAIN_MESSAGE_MAX_SIZE, portMAX_DELAY);
 
         if (rx_size <= 0) {
-            printf("No message received\n");
+            printf("Main: No message received\n");
             continue;
         }
         if (_main_states[current_state]) {
@@ -283,4 +426,9 @@ void _Noreturn app_main(void)
             }
         }
     }
+}
+
+
+MessageBufferHandle_t MAIN_GetMessageBuffer(void) {
+    return message_buffer;
 }

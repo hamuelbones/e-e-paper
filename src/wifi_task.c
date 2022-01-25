@@ -4,76 +4,90 @@
 
 #include "wifi_task.h"
 #include "wifi_hal.h"
-#include "cryptography_hal.h"
-#include "jwt.h"
-#include <printf.h>
+#include "toml_resources.h"
+#include "message_buffer.h"
 
+#define WIFI_MESSAGE_BUFFER_SIZE 200
+#define WIFI_MESSAGE_MAX_SIZE 50
 
-typedef enum {
-    WIFI_STATE_INIT,
-
-    WIFI_STATE_CONNECT,
-
-
-};
-
-
+static MessageBufferHandle_t message_buffer;
 static TaskHandle_t _wifiHandle;
-
-bool _generate_jwt_signature_rsa(void* params, const uint8_t *message, size_t len, uint8_t** signature, size_t *sig_len) {
-    uint8_t sha_result[32];
-    cryptography_digest_sha(message, len, 256, sha_result);
-    return cryptography_sign_rsa("private.pem", sha_result, 32, signature, sig_len);
-}
-
-static char cur_jwt[600];
-static MessageBufferHandle_t _WifiMessageBuffer;
-
-#define WIFI_MESSAGE_SIZE (20)
 
 void _Noreturn wifi_task(void* params) {
 
-#if 1
-    vTaskDelay(10);
 
-    // Test JWT!
-    JWT_CTX *jwt = jwt_new("RS256", 1642824154, 1000, _generate_jwt_signature_rsa, NULL);
-    jwt_add_string(jwt, JWT_HEADER, "kid", "6F8D5846-FA83-46F7-8007-60C0414A5518");
-    strcpy(cur_jwt, "Authorization: Bearer ");
-    size_t offset = strlen(cur_jwt);
-    size_t token_size = jwt_serialize(jwt, cur_jwt+offset, 600-offset);
-    printf("Token size: %zu\n", token_size);
-    printf("%s\n", cur_jwt);
-
-    jwt_destroy(jwt);
-#endif
-
-    _WifiMessageBuffer = xMessageBufferCreate(50);
-
-    WIFI_Init(_WifiMessageBuffer);
-    WIFI_Connect("ham", "smokyradio");
-
-    char * headers[] = {
-            cur_jwt
-    };
-
-    WIFI_GetNetworkTime("us.pool.ntp.org");
-
-    WIFI_HttpGet("127.0.0.1:8000",
-                 "/dev_api/",
-                 (const char **) headers,
-                 1);
+    message_buffer = xMessageBufferCreate(WIFI_MESSAGE_BUFFER_SIZE);
+    WIFI_Init();
 
     while (1) {
+        WIFI_REQUEST request = {0};
+        size_t rx_size = xMessageBufferReceive(message_buffer, &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
 
-        uint8_t inbound_message[WIFI_MESSAGE_SIZE] = {0};
-        xMessageBufferReceive(_WifiMessageBuffer, inbound_message, WIFI_MESSAGE_SIZE, portMAX_DELAY);
+        if (rx_size <= 0) {
+            printf("WiFi: No message received\n");
+            continue;
+        }
+
+        switch (request.type) {
+            case WIFI_CONNECT: {
+                toml_table_t *startup = toml_resource_get("startup");
+                toml_array_t* wifi_credentials = toml_array_in(startup, "wifi");
+                int num_wifi_aps = toml_array_nelem(wifi_credentials);
+                bool succeeded = false;
+                for (int i=0; i<num_wifi_aps; i++) {
+                    toml_table_t *current_creds = toml_table_at(wifi_credentials, i);
+
+                    toml_datum_t ssid = toml_string_in(current_creds, "ssid");
+                    toml_datum_t password = toml_string_in(current_creds, "password");
+
+                    if (!ssid.ok) {
+                        continue;
+                    }
+
+                    if (WIFI_Connect(ssid.u.s, password.ok ? password.u.s : NULL)) {
+                        // success
+                        succeeded = true;
+                        break;
+                    }
+                }
+                if (request.cb) {
+                    WIFI_CONNECT_RESPONSE resp_data = {.connected = succeeded};
+                    request.cb(request.cb_params, &resp_data);
+                }
+                break;
+            }
+            case WIFI_DISCONNECT:
+                WIFI_Disconnect();
+                if (request.cb) {
+                    request.cb(request.cb_params, NULL);
+                }
+                break;
+            case WIFI_GET: {
+                int status = 0;
+                bool succeeded = WIFI_HttpGet(request.get.host,
+                                              request.get.subdirectory,
+                                              (const char**)request.get.headers,
+                                              request.get.header_count,
+                                              request.get.headers_filename,
+                                              request.get.response_filename,
+                                              &status);
+                if (request.cb) {
+                    WIFI_GET_RESPONSE response = {.status = status};
+                    request.cb(request.cb_params, &response);
+                }
+            }
+                break;
+            case WIFI_SYNC_TIME: {
+                uint32_t time = WIFI_GetNetworkTime(request.sync_time.url);
+                if (request.cb) {
+                    WIFI_SYNC_TIME_RESPONSE response = {.unix_time = time};
+                    request.cb(request.cb_params, &response);
+                }
+            }
+                break;
+        }
 
     }
-}
-
-TaskHandle_t wifi_task_handle(void) {
-    return _wifiHandle;
 }
 
 
@@ -84,4 +98,8 @@ void wifi_task_start(void) {
                 NULL,
                 5,
                 &_wifiHandle);
+}
+
+MessageBufferHandle_t wifi_message_buffer(void) {
+    return message_buffer;
 }
