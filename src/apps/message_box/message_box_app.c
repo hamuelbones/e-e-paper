@@ -13,6 +13,7 @@
 #include "display_draw_geometry.h"
 #include "display_draw_text.h"
 
+
 #include <string.h>
 
 #define MESSAGES_FILENAME "message_box.toml"
@@ -56,7 +57,7 @@ void _load_message_file(MESSAGE_BOX_CONTEXT *context) {
 
     char toml_error_msg[100];
     // Load message file
-    file_handle fh = FS_Open(MESSAGES_FILENAME, "r");
+    file_handle fh = FS_Open(SD_MOUNT_POINT MESSAGES_FILENAME, "r");
     context->messages = toml_parse_file(fh, toml_error_msg, 100);
     if (!context->messages) {
         printf("Toml message file load error: %s\n", toml_error_msg);

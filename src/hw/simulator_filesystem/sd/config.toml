@@ -8,11 +8,11 @@ url = "127.0.0.1:8000/dev_api/message_box/6/responses"
 local_name = "message_box.toml"
 auth = true
 
-[[resource]]
-name = "symbols"
-url = "127.0.0.1:8000/dev_api/symbols"
-local_name = "symbols.toml"
-auth = true
+#[[resource]]
+#name = "symbols"
+#url = "127.0.0.1:8000/dev_api/symbols"
+#local_name = "symbols.toml"
+#auth = true
 
 [render_root]
 	[[render_root.symbol]]

@@ -10,4 +10,5 @@
 
 MessageBufferHandle_t MAIN_GetMessageBuffer(void);
 
+
 #endif //EPAPER_DISPLAY_EPAPER_DISPLAY_MAIN_H

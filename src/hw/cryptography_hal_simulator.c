@@ -33,6 +33,7 @@ bool cryptography_rsa_exists(const char* private_filename,
     if (0 == FS_Stat(private_filename, &s) && 0 == FS_Stat(public_filename, &s)) {
         return true;
     }
+    return false;
 }
 
 // Generate a new set of RSA keys on the filesystem.
@@ -76,6 +77,8 @@ bool cryptography_rsa_generate(const char *private_filename,
     BIO_free(private_out);
     BIO_free(public_out);
     EVP_PKEY_free(key);
+
+    return true;
 }
 
 bool cryptography_digest_sha(const uint8_t *data,

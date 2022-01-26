@@ -44,8 +44,10 @@ void _Noreturn wifi_task(void* params) {
                         continue;
                     }
 
+                    printf("Connecting to Wifi router: %s\n", ssid.u.s);
                     if (WIFI_Connect(ssid.u.s, password.ok ? password.u.s : NULL)) {
                         // success
+                        printf("Connection successful\n");
                         succeeded = true;
                         break;
                     }

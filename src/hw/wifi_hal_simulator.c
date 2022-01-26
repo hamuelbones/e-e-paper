@@ -135,14 +135,21 @@ uint32_t WIFI_GetNetworkTime(const char* host) {
         error( "ERROR writing to socket" );
 
 
+    const int max_eintr = 100;
+    int eintr = 0;
     while (1) {
 
         n = read( sockfd, ( char* ) &packet, sizeof( ntp_packet ) );
         if ( n < 0 ) {
             if (errno != EINTR) {
                 error( "ERROR reading from socket" );
+                eintr++;
+                if (eintr >= max_eintr) {
+                    printf("Max read time from socket reached\n");
+                    break;
+                }
             }
-            printf("EINTR\n");
+            //printf("EINTR\n");
             usleep(1000);
         } else {
             break;
@@ -162,6 +169,8 @@ uint32_t WIFI_GetNetworkTime(const char* host) {
     // (1900)------------------(1970)**************************************(Time Packet Left the Server)
 
     time_t txTm = ( time_t ) ( packet.txTm_s - NTP_TIMESTAMP_DELTA );
+
+    printf("Unix time: %u\n", txTm);
 
     return (uint32_t) txTm;
 }

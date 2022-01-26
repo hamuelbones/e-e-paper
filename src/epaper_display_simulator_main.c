@@ -238,7 +238,6 @@ void *freertos_main_thread(void* params) {
 static gboolean
 update_display(GtkWidget *widget, cairo_t *context, gpointer data)
 {
-    printf("display update2\n");
     static GdkPixbuf *pxb;
     static GBytes *bytes;
 
@@ -258,7 +257,6 @@ update_display(GtkWidget *widget, cairo_t *context, gpointer data)
 
 GtkWidget *display_image;
 int trigger_update(void* nothing) {
-    printf("display update\n");
     gtk_widget_queue_draw(display_image);
     return gtk_true();
 }

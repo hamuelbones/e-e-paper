@@ -8,6 +8,14 @@
 #ifndef EPAPER_DISPLAY_FILESYSTEM_HAL_H
 #define EPAPER_DISPLAY_FILESYSTEM_HAL_H
 
+
+#define STARTUP_FILENAME "startup.toml"
+#define APP_CONFIG_FILENAME "config.toml"
+#define REQUEST_TEMPORARY_FILENAME "temp.bin"
+
+#define SD_MOUNT_POINT "/sd/"
+#define INTERNAL_MOUNT_POINT "/int/"
+
 typedef void* file_handle;
 
 // FS characteristics should be known by hardware.

@@ -22,6 +22,7 @@
 #include "toml_resources.h"
 #include "cryptography_hal.h"
 #include "jwt.h"
+#include "epaper_display_main.h"
 
 #include "apps.h"
 #include "message_box_app.h"
@@ -33,12 +34,6 @@
 #define MAIN_MESSAGE_BUFFER_SIZE (400)
 #define MAIN_MESSAGE_MAX_SIZE (100)
 
-#define STARTUP_FILENAME "startup.toml"
-#define APP_CONFIG_FILENAME "config.toml"
-#define REQUEST_TEMPORARY_FILENAME "temp.bin"
-
-#define SD_MOUNT_POINT "/sd/"
-#define INTERNAL_MOUNT_POINT "/int/"
 
 #define AUTHOR_SUBSTITUTION_VALUE "!!MSG_BOX_AUTHOR!!"
 #define MESSAGE_SUBSTITUTION_VALUE "!!MSG_BOX_MESSAGE!!"
@@ -85,7 +80,7 @@ static MessageBufferHandle_t message_buffer;
 static const APP_INTERFACE *_apps[NUMBER_OF_APPS] = {
     &g_message_box_interface
 };
-static const APP_INTERFACE *_currentApp = NULL;
+
 static void* _currentAppContext = NULL;
 static xTimerHandle _currentAppTimer = NULL;
 static bool standalone = false;
@@ -107,7 +102,7 @@ static void _handle_connection(void* params, void* response) {
     WIFI_CONNECT_RESPONSE *connect = response;
     uint8_t message[1] = {MAIN_MESSAGE_WIFI_CONNECTED};
     if (!connect->connected) {
-        message[1] = MAIN_MESSAGE_WIFI_CONNECT_FAILED;
+        message[0] = MAIN_MESSAGE_WIFI_CONNECT_FAILED;
     }
     xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
 }
@@ -117,7 +112,7 @@ static void _handle_time_synced(void* params, void* response) {
 
     uint8_t message[1] = {MAIN_MESSAGE_TIME_SYNCED};
     if (!sync_time->unix_time) {
-        message[1] = MAIN_MESSAGE_TIME_SYNC_FAILED;
+        message[0] = MAIN_MESSAGE_TIME_SYNC_FAILED;
     }
     xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
 }
@@ -138,12 +133,12 @@ static void _issue_get_request(const char* host, const char* subdirectory, const
             .type = WIFI_GET,
             .cb = _handle_config_refresh,
             .get = {
-                    .host = host,
-                    .subdirectory = subdirectory,
+                    .host = (char*)host,
+                    .subdirectory = (char*)subdirectory,
                     .headers = NULL,
                     .header_count = 0,
                     .headers_filename = NULL,
-                    .response_filename = destination,
+                    .response_filename = (char*) destination,
             },
     };
 
@@ -258,7 +253,7 @@ static int _state_connect(uint8_t *message, size_t len) {
             WIFI_REQUEST request = {
                     .type = WIFI_SYNC_TIME,
                     .cb = _handle_time_synced,
-                    .sync_time.url = "time.nist.gov",
+                    .sync_time.url = "pool.ntp.org",
             };
 
             xMessageBufferSend(wifi_message_buffer(), &request, sizeof(request), portMAX_DELAY);
@@ -295,6 +290,7 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
         case MAIN_MESSAGE_TIME_SYNC_FAILED:
             return MAIN_STATE_SYNC_TIME;
     }
+    return -1;
 }
 
 static int _state_refresh_config(uint8_t *message, size_t len) {
@@ -303,7 +299,7 @@ static int _state_refresh_config(uint8_t *message, size_t len) {
             int16_t status = -1;
             if (!standalone && len >= 2) {
                 status = message[0] | (message[1] << 8);
-                printf("Config refresh status: %u", status);
+                printf("Config refresh status: %u\n", status);
             }
 
             if (status == 200) {
@@ -337,9 +333,13 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
 }
 
 static int _state_run_app(uint8_t *message, size_t len) {
+
+    static const APP_INTERFACE *current_app;
+
     switch(message[0]) {
         case MAIN_MESSAGE_APP_INIT: {
-            _currentApp = NULL;
+            current_app = NULL;
+            toml_table_t *device_config = toml_resource_get("config");
             toml_table_t *app_info = toml_table_in(device_config, "application");
             toml_datum_t app_name = toml_string_in(app_info, "name");
 
@@ -347,25 +347,25 @@ static int _state_run_app(uint8_t *message, size_t len) {
 
             for (int i=0; i<NUMBER_OF_APPS; i++) {
                 if (strcmp(app_name.u.s, _apps[i]->name) == 0) {
-                    _currentApp = _apps[i];
+                    current_app = _apps[i];
                     break;
                 }
             }
-            if (_currentApp) {
-                _currentAppContext = _currentApp->app_init(startup_config, device_config);
+            if (current_app) {
+                _currentAppContext = current_app->app_init(startup_config, device_config);
                 if (!_currentAppTimer) {
-                    _currentAppTimer = xTimerCreate("App", _currentApp->refresh_rate_ms*1000/configTICK_RATE_HZ, pdTRUE,
+                    _currentAppTimer = xTimerCreate("App", current_app->refresh_rate_ms*1000/configTICK_RATE_HZ, pdTRUE,
                                                     NULL, _app_timer_callback);
                 } else {
-                    xTimerChangePeriod(_currentAppTimer, _currentApp->refresh_rate_ms*1000/configTICK_RATE_HZ, portMAX_DELAY);
+                    xTimerChangePeriod(_currentAppTimer, current_app->refresh_rate_ms*1000/configTICK_RATE_HZ, portMAX_DELAY);
                 }
                 xTimerStart(_currentAppTimer, portMAX_DELAY);
             }
         }
             break;
         case MAIN_MESSAGE_APP: {
-            if (_currentApp) {
-                _currentApp->app_process(_currentAppContext, message+1, len-1);
+            if (current_app) {
+                current_app->app_process(_currentAppContext, message+1, len-1);
             }
         }
         default:
