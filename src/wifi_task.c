@@ -66,6 +66,10 @@ void _Noreturn wifi_task(void* params) {
                 break;
             case WIFI_GET: {
                 int status = 0;
+                printf("Sending HTTP GET Request:\n"
+                       "\thost:%s\n"
+                       "\tdir:%s\n",
+                       request.get.host, request.get.subdirectory);
                 bool succeeded = WIFI_HttpGet(request.get.host,
                                               request.get.subdirectory,
                                               (const char**)request.get.headers,
@@ -73,6 +77,7 @@ void _Noreturn wifi_task(void* params) {
                                               request.get.headers_filename,
                                               request.get.response_filename,
                                               &status);
+                printf("Response status: %u\n", status);
                 if (request.cb) {
                     WIFI_GET_RESPONSE response = {.status = status};
                     request.cb(request.cb_params, &response);

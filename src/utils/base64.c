@@ -26,7 +26,7 @@ uint8_t raw_to_character(uint8_t input) {
 
 size_t base64_encode(uint8_t* output, size_t len, const uint8_t *input) {
     size_t count = 0;
-    printf("b64_encode: %s\n", input);
+    printf("b64_encode: %.*s\n", (int)len, input);
 
     while (len) {
         uint32_t chunk_size = len >= 3 ? 3 : len;

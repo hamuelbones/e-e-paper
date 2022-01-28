@@ -11,11 +11,14 @@ void cryptography_init(void);
 
 
 bool cryptography_rsa_exists(const char* private_filename,
-                             const char* public_filename);
+                             const char* public_filename,
+                             const char* uuid_filename);
 
-// Generate a new set of RSA keys on the filesystem.
+// Generate a new set of RSA keys on the filesystem. Generate UUID to use for the key set.
 bool cryptography_rsa_generate(const char *private_filename,
-                               const char *public_filename);
+                               const char *public_filename,
+                               const char *uuid_filename);
+
 
 bool cryptography_digest_sha(const uint8_t *data,
                              size_t len,

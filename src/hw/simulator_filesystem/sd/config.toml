@@ -1,12 +1,15 @@
-
+#test
 [application]
 name = "message_box"
 
+
 [[resource]]
 name = "messages"
-url = "127.0.0.1:8000/dev_api/message_box/6/responses"
-local_name = "message_box.toml"
+host = "127.0.0.1:8000"
+dir = "/dev_api/message_box/2/"
+local_filename = "message_box.toml"
 auth = true
+
 
 #[[resource]]
 #name = "symbols"
@@ -131,4 +134,3 @@ auth = true
 		width = 20
 		height = 480
 		# To do: render? with rectangles
-

@@ -7,6 +7,6 @@ password = "smokyradio"
 
 [server]
 host = "127.0.0.1:8000"
-config_dir = "/dev_api/config"
+config_dir = "/dev_api/config/"
 auth = true
 

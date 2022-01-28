@@ -7,6 +7,7 @@
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 #include <openssl/conf.h>
+#include <openssl/rand.h>
 #include <string.h>
 #include "filesystem_hal.h"
 #include "FreeRTOSConfig.h"
@@ -28,8 +29,10 @@ void cryptography_init(void) {
 
 
 bool cryptography_rsa_exists(const char* private_filename,
-                             const char* public_filename) {
+                             const char* public_filename,
+                             const char* uuid_filename) {
     struct stat s;
+    // TODO do proper validation and backup/restore
     if (0 == FS_Stat(private_filename, &s) && 0 == FS_Stat(public_filename, &s)) {
         return true;
     }
@@ -38,7 +41,26 @@ bool cryptography_rsa_exists(const char* private_filename,
 
 // Generate a new set of RSA keys on the filesystem.
 bool cryptography_rsa_generate(const char *private_filename,
-                               const char *public_filename) {
+                               const char *public_filename,
+                               const char *uuid_filename) {
+
+
+    FS_Remove(uuid_filename);
+    void* f = FS_Open(uuid_filename, "w");
+
+    if (!f) {
+        return false;
+    }
+
+    char uuid[100] = {'\0'};
+    uint8_t bytes[16] = {0};
+    uint8_t *b = bytes;
+
+    RAND_bytes(bytes, 16);
+    int len = snprintf(uuid, 100, "uuid = \"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\"\n",
+                       b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
+    FS_Write(f, uuid, len);
+    FS_Close(f);
 
     EVP_PKEY *key = EVP_RSA_gen(2048);
 
@@ -52,8 +74,9 @@ bool cryptography_rsa_generate(const char *private_filename,
     BIO_get_mem_ptr(public_out, &public_buf);
     BIO_get_mem_ptr(private_out, &private_buf);
 
+
     FS_Remove(private_filename);
-    void* f = FS_Open(private_filename, "w");
+    f = FS_Open(private_filename, "w");
     if (!f) {
         BIO_free(private_out);
         BIO_free(public_out);
@@ -114,6 +137,7 @@ bool cryptography_sign_rsa(const char* private_filename,
                            uint8_t **output,
                            size_t *output_len) {
 
+    // TODO support other RSA bit/digest lengths
     if (len != 32) {
         return false;
     }
