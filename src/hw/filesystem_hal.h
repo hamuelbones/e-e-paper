@@ -20,7 +20,6 @@ typedef void* file_handle;
 
 // FS characteristics should be known by hardware.
 int FS_Mount(void);
-void FS_Unmount(void);
 file_handle FS_Open(const char* name, const char* mode);
 int FS_Read(file_handle handle, void* buf, int len);
 int FS_Write(file_handle handle, void* buf, int len);
@@ -30,8 +29,5 @@ int FS_Stat(const char* path, struct stat* stat);
 int FS_Close(file_handle handle);
 int FS_Rename(const char* old, const char* new);
 int FS_Feof(file_handle handle);
-
-int FS_NumFiles();
-int FS_NthFile(int n);
 
 #endif //EPAPER_DISPLAY_FILESYSTEM_HAL_H
