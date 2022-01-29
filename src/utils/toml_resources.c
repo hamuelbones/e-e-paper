@@ -5,7 +5,7 @@
 #include "toml_resources.h"
 #include "filesystem_hal.h"
 #include <string.h>
-#include <FreeRTOS.h>
+#include "freertos/FreeRTOS.h"
 
 static TOML_RESOURCE_CTX _tomlResources;
 
@@ -32,7 +32,7 @@ bool toml_resource_load(const char* file_name, const char* resource_name) {
     TOML_RESOURCE *new_res = &_tomlResources.resource[new_id];
 
     new_res->name = pvPortMalloc(res_name_len+1);
-    strncpy(new_res->name, resource_name, res_name_len+1);
+    memcpy(new_res->name, resource_name, res_name_len+1);
     new_res->table = table;
 
     _tomlResources.count++;

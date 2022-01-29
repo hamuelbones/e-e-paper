@@ -6,5 +6,6 @@ else()
     idf_component_register(
             SRCS "base64.c" "jwt.c" "file_utils.c" "toml_resources.c"
             INCLUDE_DIRS "."
+            REQUIRES tomlc99 hw
     )
 endif()

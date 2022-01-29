@@ -7,7 +7,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "message_buffer.h"
+#include "freertos/message_buffer.h"
 #include <stdbool.h>
 
 typedef enum {

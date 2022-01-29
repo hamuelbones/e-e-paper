@@ -4,7 +4,7 @@
 
 #include "base64.h"
 #include <string.h>
-#include <printf.h>
+#include <stdio.h>
 
 uint8_t raw_to_character(uint8_t input) {
     if (input <= 25) {

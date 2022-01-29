@@ -118,8 +118,6 @@ size_t jwt_serialize(JWT_CTX *jwt, char *output, size_t max_len) {
     jwt_append_token(&jwt->header, "}", 1);
     jwt_append_token(&jwt->claims, "}", 1);
 
-    size_t len = 0;
-
     size_t b64_header_size = ((jwt->header.size + 2) / 3) * 4;
     size_t b64_claims_size = ((jwt->claims.size + 2) / 3) * 4;
     size_t size_to_digest = b64_header_size + 1 + b64_claims_size;

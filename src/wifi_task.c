@@ -5,7 +5,7 @@
 #include "wifi_task.h"
 #include "wifi_hal.h"
 #include "toml_resources.h"
-#include "message_buffer.h"
+#include "freertos/message_buffer.h"
 
 #define WIFI_MESSAGE_BUFFER_SIZE 200
 #define WIFI_MESSAGE_MAX_SIZE 50

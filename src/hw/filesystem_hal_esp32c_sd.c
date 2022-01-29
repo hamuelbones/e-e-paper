@@ -13,7 +13,6 @@
 #include "driver/sdspi_host.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "esp_spiffs.h"
 #include "sdmmc_cmd.h"
 
 typedef void* file_handle;
@@ -30,13 +29,13 @@ int FS_Mount(void) {
 
     esp_err_t ret;
 
-    esp_vfs_fat_mount_config_t internal_config = {
+    esp_vfs_fat_mount_config_t internal_mount_config = {
             .max_files = 2,
             .format_if_mount_failed = true,
             .allocation_unit_size = 16*1024,
     };
     wl_handle_t fat_handle;
-    ret = esp_vfs_fat_spiflash_mount(INTERNAL_MOUNT_POINT, "fs", &internal_config, &fat_handle);
+    ret = esp_vfs_fat_spiflash_mount(INTERNAL_MOUNT_POINT, "fs", &internal_mount_config, &fat_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount internal flash partition.");
         return -1;
@@ -49,7 +48,7 @@ int FS_Mount(void) {
     slot_config.host_id = host.slot;
 
     // Options for mounting the filesystem.
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+    esp_vfs_fat_sdmmc_mount_config_t sd_mount_config = {
             .format_if_mount_failed = false,
             .max_files = 2,
             .allocation_unit_size = 16 * 1024
@@ -58,7 +57,7 @@ int FS_Mount(void) {
     sdmmc_card_t *card;
     ESP_LOGI(TAG, "Mounting filesystem");
     // TODO recommended to do more proper SD card probing + partition mounting manually
-    ret = esp_vfs_fat_sdspi_mount(SD_MOUNT_POINT, &host, &slot_config, &mount_config, &card);
+    ret = esp_vfs_fat_sdspi_mount(SD_MOUNT_POINT, &host, &slot_config, &sd_mount_config, &card);
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
