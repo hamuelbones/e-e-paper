@@ -152,13 +152,20 @@ bool WIFI_HttpGet(const char* host,
                   int *status) {
 
     //TODO Implement saving headers - not done for now
-
     esp_http_client_config_t config = {0};
+    config.buffer_size_tx = 1024;
+
     config.method = HTTP_METHOD_GET;
-    config.host = host;
-    config.path = subdirectory;
+    char* full_url = pvPortMalloc(8 + strlen(host) + strlen(subdirectory) + 1);
+    strcpy(full_url, "https://");
+    strcat(full_url, host);
+    strcat(full_url, subdirectory);
+    config.url = full_url;
+
+    // TODO - Check server certificate
 
     esp_http_client_handle_t handle = esp_http_client_init(&config);
+    vPortFree(full_url);
 
 
     for (int i=0; i<header_count; i++) {
@@ -167,7 +174,7 @@ bool WIFI_HttpGet(const char* host,
         strcpy(header_copy, headers[i]);
         char* kv_break = strrchr(header_copy, ':');
         *kv_break = 0;
-        printf("Setting header, key (%s) value (%s)\n", header_copy, kv_break+2);
+        printf("Setting header, key (%s)\n", header_copy);
         esp_http_client_set_header(handle, header_copy, kv_break+2);
 
         vPortFree(header_copy);

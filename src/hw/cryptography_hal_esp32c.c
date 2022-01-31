@@ -7,10 +7,8 @@
 #include <string.h>
 #include "cryptography_hal.h"
 #include "mbedtls/rsa.h"
-#include "mbedtls/pem.h"
 #include "mbedtls/sha256.h"
 #include "mbedtls/pk.h"
-#include "mbedtls/error.h"
 #include "esp_random.h"
 #include "freertos/FreeRTOS.h"
 #include "filesystem_hal.h"
@@ -141,7 +139,7 @@ bool cryptography_digest_sha(const uint8_t *data,
         printf("Unsupported SHA mode\n");
         return false;
     }
-    int result = mbedtls_sha256_ret(data, len, output, false);
+    int result = mbedtls_sha256_ret(data, len, output, 0);
 
     if (result != 0) {
         printf("SHA hash calculation failure! (%d)", result);
@@ -178,11 +176,12 @@ bool cryptography_sign_rsa(const char* private_filename,
 
     *output = pvPortMalloc(256);
 
-    result = mbedtls_pk_sign(&pk_ctx, MBEDTLS_MD_NONE, data, len, *output, output_len, _cryptography_fill_random, NULL);
+    result = mbedtls_pk_sign(&pk_ctx, MBEDTLS_MD_SHA256, data, len, *output, output_len, _cryptography_fill_random, NULL);
     mbedtls_pk_free(&pk_ctx);
     if (result != 0) {
         printf("Failed to generate signature! (%d)\n", result);
         vPortFree(output);
+        return false;
     }
 
     return true;

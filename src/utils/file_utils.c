@@ -8,14 +8,18 @@
 
 bool file_copy(const char* to, const char* from) {
 
+    printf("Copy from %s to %s\n", from, to);
+
     file_handle in_f = FS_Open(from, "r");
     if (!in_f) {
+        printf("No source file \n");
         return false;
     }
 
     FS_Remove(to);
     file_handle out_f = FS_Open(to, "wb");
     if (!out_f) {
+        printf("Can't open output file \n");
         FS_Close(in_f);
         return false;
     }
@@ -25,7 +29,6 @@ bool file_copy(const char* to, const char* from) {
         int read_len = FS_Read(in_f, read_chunk, 64);
         if (read_len > 0) {
             int write_len = FS_Write(out_f, read_chunk, read_len);
-            printf("r: %d, w: %d\n", read_len, write_len);
         }
     }
 
@@ -86,4 +89,22 @@ bool file_load_uuid(const char* path, char uuid[37]) {
 
 size_t toml_fs_read(void* ptr, size_t size, size_t nitems, void* stream) {
     return FS_Read(stream, ptr, size*nitems);
+}
+
+void file_print(const char* path) {
+    file_handle *f = FS_Open(path, "r");
+    if (!f) {
+        return;
+    }
+    printf("File contents -- %s --\n\n", path);
+    while (!FS_Feof(f)) {
+        char d[64];
+        int read_len = FS_Read(f, d, 64);
+        for (int i=0; i<read_len; i++) {
+            putc(d[i], stdout);
+        }
+    }
+    putc('\n', stdout);
+    putc('\n', stdout);
+    FS_Close(f);
 }

@@ -26,6 +26,7 @@ bool toml_resource_load(const char* file_name, const char* resource_name) {
     char toml_error_msg[100];
     toml_table_t *table = toml_parse_file(f, toml_error_msg, 100);
     if (!table) {
+        FS_Close(f);
         return false;
     }
 
@@ -39,6 +40,7 @@ bool toml_resource_load(const char* file_name, const char* resource_name) {
     new_res->table = table;
 
     _tomlResources.count++;
+    FS_Close(f);
     return true;
 }
 

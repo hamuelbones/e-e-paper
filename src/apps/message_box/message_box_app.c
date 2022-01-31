@@ -12,11 +12,9 @@
 #include "display_draw_image.h"
 #include "display_draw_geometry.h"
 #include "display_draw_text.h"
-
+#include "toml_resources.h"
 
 #include <string.h>
-
-#define MESSAGES_FILENAME "message_box.toml"
 
 typedef struct {
     toml_table_t *startup_config;
@@ -53,33 +51,13 @@ DRAW_FLAGS _parse_draw_flags(toml_table_t *table) {
     return flags;
 }
 
-void _load_message_file(MESSAGE_BOX_CONTEXT *context) {
-
-    char toml_error_msg[100];
-    // Load message file
-    file_handle fh = FS_Open(SD_MOUNT_POINT MESSAGES_FILENAME, "r");
-    context->messages = toml_parse_file(fh, toml_error_msg, 100);
-    if (!context->messages) {
-        printf("Toml message file load error: %s\n", toml_error_msg);
-    }
-    FS_Close(fh);
-}
-
 void* message_box_init(toml_table_t *startup_config, toml_table_t * device_config) {
 
     MESSAGE_BOX_CONTEXT *context = pvPortMalloc(sizeof(MESSAGE_BOX_CONTEXT));
 
     context->startup_config = startup_config;
     context->app_config = device_config;
-    context->messages = NULL;
-
-    // If online, make a request to get messages
-    toml_datum_t mode = toml_string_in(startup_config, "mode");
-    if (strcmp("online", mode.u.s) == 0) {
-        // TODO
-    } else {
-        _load_message_file(context);
-    }
+    context->messages = toml_resource_get("messages");
 
     return context;
 }

@@ -123,12 +123,15 @@ static void _handle_time_synced(void* params, void* response) {
 
 static void _handle_get(void* params, void* response) {
     WIFI_GET_RESPONSE *get = response;
+    char** headers = params;
 
     uint8_t message[3] = {MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY, get->status & 0xFF, get->status>>8 & 0xFF};
     xMessageBufferSend(message_buffer, &message, 3, portMAX_DELAY);
 
-    WIFI_GET_ARGS *args = params;
-    vPortFree(args->headers);
+
+    if (headers) {
+        vPortFree(headers);
+    }
 }
 
 static void _issue_get_request(const char* host, const char* subdirectory, const char* destination, bool use_jwt) {
@@ -147,7 +150,7 @@ static void _issue_get_request(const char* host, const char* subdirectory, const
     };
 
     if (use_jwt) {
-        char* headers[1] = {pvPortMalloc(sizeof(char*))};
+        char** headers = {pvPortMalloc(sizeof(char*))};
         headers[0] = jwt_header;
 
         request.get.headers = headers;
@@ -155,7 +158,7 @@ static void _issue_get_request(const char* host, const char* subdirectory, const
     }
 
     // Provide context struct back so we can clean up
-    request.cb_params = &request.get;
+    request.cb_params = request.get.headers;
 
     xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
 }
@@ -367,6 +370,8 @@ static int _state_refresh_config(uint8_t *message, size_t len) {
             if (standalone && (next_state == MAIN_STATE_REFRESH_RESOURCES)) {
                 // Should not hit network in standalone mode!
                 next_state = MAIN_STATE_RUN_APP;
+                uint8_t message = MAIN_MESSAGE_APP_INIT;
+                xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
             }
 
             return next_state;
@@ -394,6 +399,8 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
                 if (_refresh_resource(current_resource_fetch_id)) {
                     return -1;
                 } else {
+                    uint8_t message = MAIN_MESSAGE_APP_INIT;
+                    xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
                     return MAIN_STATE_RUN_APP;
                 }
             }
@@ -405,16 +412,14 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
             if (status == 200) {
                 // Move file to correct location on SD
                 FS_Remove(to);
-                FS_Rename(from, to);
+                file_copy(to, from);
             }
 
             strcpy(from, to);
             snprintf(to, 60, "%s%s", INTERNAL_MOUNT_POINT, name.u.s);
 
             // Move file from SD to internal
-            if (file_exists(from)) {
-                file_copy(from, to);
-            }
+            file_copy(to, from);
 
             toml_resource_load(to, resource_name.u.s);
 
@@ -422,6 +427,8 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
             if (_refresh_resource(current_resource_fetch_id)) {
                 return -1;
             } else {
+                uint8_t message = MAIN_MESSAGE_APP_INIT;
+                xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
                 return MAIN_STATE_RUN_APP;
             }
         }
@@ -453,10 +460,10 @@ static int _state_run_app(uint8_t *message, size_t len) {
             if (current_app) {
                 _currentAppContext = current_app->app_init(startup_config, device_config);
                 if (!_currentAppTimer) {
-                    _currentAppTimer = xTimerCreate("App", current_app->refresh_rate_ms*1000/configTICK_RATE_HZ, pdTRUE,
+                    _currentAppTimer = xTimerCreate("App", current_app->refresh_rate_ms/portTICK_PERIOD_MS, pdTRUE,
                                                     NULL, _app_timer_callback);
                 } else {
-                    xTimerChangePeriod(_currentAppTimer, current_app->refresh_rate_ms*1000/configTICK_RATE_HZ, portMAX_DELAY);
+                    xTimerChangePeriod(_currentAppTimer, current_app->refresh_rate_ms/portTICK_PERIOD_MS, portMAX_DELAY);
                 }
                 xTimerStart(_currentAppTimer, portMAX_DELAY);
             }

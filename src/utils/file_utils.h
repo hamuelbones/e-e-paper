@@ -13,5 +13,6 @@ bool file_exists(const char* path);
 
 bool file_load_uuid(const char* path, char uuid[37]);
 size_t toml_fs_read(void* ptr, size_t size, size_t nitems, void* stream);
+void file_print(const char* path);
 
 #endif //EPAPER_DISPLAY_FILE_UTILS_H
