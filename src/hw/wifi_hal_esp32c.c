@@ -27,6 +27,7 @@ typedef enum {
 
 static void start_timeout_timer(uint32_t ms) {
     xTimerChangePeriod(_timeout_timer, ms/portTICK_RATE_MS, portMAX_DELAY);
+    xTimerStart(_timeout_timer, portMAX_DELAY);
 }
 
 static void stop_timeout_timer(void) {
@@ -36,12 +37,14 @@ static void stop_timeout_timer(void) {
 static void event_handler(void* arg, esp_event_base_t event_base,
                           int32_t event_id, void* event_data)
 {
+    printf("base: %s, id: %d\n", event_base, event_id);
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         xEventGroupSetBits(_event_group, ESP_WIFI_STARTED);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_STOP) {
         xEventGroupSetBits(_event_group, ESP_WIFI_STOPPED);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        xEventGroupSetBits(_event_group, ESP_WIFI_DISCONNECTED);
+        esp_wifi_connect();
+        //xEventGroupSetBits(_event_group, ESP_WIFI_DISCONNECTED);
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         xEventGroupSetBits(_event_group, ESP_WIFI_CONNECTED);
     }
@@ -55,7 +58,7 @@ static void timeout_handler(TimerHandle_t xTimer) {
 
 void WIFI_Init(void) {
 
-    xTimerCreate("wifi_tmo", 100, false, NULL, timeout_handler);
+    _timeout_timer = xTimerCreate("wifi_tmo", 100, false, NULL, timeout_handler);
     _event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -105,10 +108,11 @@ bool WIFI_Connect(const char* ssid, const char* password) {
     strncpy((char*)wifi_config.sta.ssid, ssid, 31);
     strncpy((char*)wifi_config.sta.password, password, 61);
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
+    esp_wifi_connect();
 
     // Wait for connection
-    start_timeout_timer(10000);
     xEventGroupClearBits(_event_group, ESP_WIFI_CONNECTED | ESP_WIFI_TIMEOUT | ESP_WIFI_DISCONNECTED);
+    start_timeout_timer(10000);
     EventBits_t bits = xEventGroupWaitBits(_event_group, ESP_WIFI_CONNECTED | ESP_WIFI_TIMEOUT,
                         true, false, portMAX_DELAY);
     stop_timeout_timer();
@@ -150,14 +154,11 @@ bool WIFI_HttpGet(const char* host,
     //TODO Implement saving headers - not done for now
 
     esp_http_client_config_t config = {0};
-    esp_http_client_handle_t handle = esp_http_client_init(&config);
+    config.method = HTTP_METHOD_GET;
+    config.host = host;
+    config.path = subdirectory;
 
-    size_t full_path_len = strlen(host) + strlen(subdirectory) + 1;
-    char* path = pvPortMalloc(full_path_len);
-    strcpy(path, host);
-    strcat(path, subdirectory);
-    esp_http_client_set_url(handle, path);
-    vPortFree(path);
+    esp_http_client_handle_t handle = esp_http_client_init(&config);
 
 
     for (int i=0; i<header_count; i++) {
@@ -166,13 +167,12 @@ bool WIFI_HttpGet(const char* host,
         strcpy(header_copy, headers[i]);
         char* kv_break = strrchr(header_copy, ':');
         *kv_break = 0;
-        printf("Setting header, key (%s) value (%s)", header_copy, kv_break+2);
+        printf("Setting header, key (%s) value (%s)\n", header_copy, kv_break+2);
         esp_http_client_set_header(handle, header_copy, kv_break+2);
 
         vPortFree(header_copy);
     }
 
-    esp_http_client_set_method(handle, HTTP_METHOD_GET);
     esp_http_client_open(handle, 0);
     int content_length = esp_http_client_fetch_headers(handle);
     if (content_length < 0) {
@@ -227,18 +227,19 @@ uint32_t WIFI_GetNetworkTime(const char* host) {
     cur_ntp_server = pvPortMalloc(len+1);
     strcpy(cur_ntp_server, host);
 
+    sntp_stop();
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, cur_ntp_server);
     sntp_set_time_sync_notification_cb(_time_sync_notification);
     sntp_init();
 
-    printf("Waiting for time sync event");
+    printf("Waiting for time sync event\t");
 
     xEventGroupClearBits(_event_group, ESP_WIFI_TIME_SYNC);
     EventBits_t bits = xEventGroupWaitBits(_event_group, ESP_WIFI_TIME_SYNC,
                                            true, false, portMAX_DELAY);
-    
-    printf("Unix time: %u", _time.tv_sec);
+
+    printf("Unix time: %u\t", _time.tv_sec);
 
     sntp_stop();
     return _time.tv_sec;

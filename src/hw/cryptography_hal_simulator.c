@@ -46,7 +46,7 @@ bool cryptography_rsa_generate(const char *private_filename,
 
 
     FS_Remove(uuid_filename);
-    void* f = FS_Open(uuid_filename, "w");
+    void* f = FS_Open(uuid_filename, "wb");
 
     if (!f) {
         return false;
@@ -76,7 +76,7 @@ bool cryptography_rsa_generate(const char *private_filename,
 
 
     FS_Remove(private_filename);
-    f = FS_Open(private_filename, "w");
+    f = FS_Open(private_filename, "wb");
     if (!f) {
         BIO_free(private_out);
         BIO_free(public_out);
@@ -87,7 +87,7 @@ bool cryptography_rsa_generate(const char *private_filename,
     FS_Close(f);
 
     FS_Remove(public_filename);
-    f = FS_Open(public_filename, "w");
+    f = FS_Open(public_filename, "wb");
     if (!f) {
         FS_Remove(private_filename);
         BIO_free(private_out);

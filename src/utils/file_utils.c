@@ -13,7 +13,8 @@ bool file_copy(const char* to, const char* from) {
         return false;
     }
 
-    file_handle out_f = FS_Open(to, "w");
+    FS_Remove(to);
+    file_handle out_f = FS_Open(to, "wb");
     if (!out_f) {
         FS_Close(in_f);
         return false;
@@ -23,7 +24,8 @@ bool file_copy(const char* to, const char* from) {
         char read_chunk[64];
         int read_len = FS_Read(in_f, read_chunk, 64);
         if (read_len > 0) {
-            FS_Write(out_f, read_chunk, read_len);
+            int write_len = FS_Write(out_f, read_chunk, read_len);
+            printf("r: %d, w: %d\n", read_len, write_len);
         }
     }
 
@@ -35,6 +37,9 @@ bool file_copy(const char* to, const char* from) {
 
     FS_Stat(from, &in_stat);
     FS_Stat(to, &out_stat);
+
+    printf("File copy: old size: %d, new size: %d\n",
+           in_stat.st_size, out_stat.st_size);
 
     // Files same size - assume file copy was successful.
     return (in_stat.st_size == out_stat.st_size);

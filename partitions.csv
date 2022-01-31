@@ -6,4 +6,4 @@ phy_init, data, phy,     0xf000,  0x1000,
 ota_0,    app,  ota_0,   0x10000, 1536K,
 ota_1,    app,  ota_1,   0x190000, 1536K,
 nvs_keys, data, nvs_keys,    0x310000, 0x1000,
-fs,       data, fat,     0x311000, 960K
+fs,       data, fat,     0x311000, 956K

@@ -10,16 +10,18 @@
 #include "mbedtls/pem.h"
 #include "mbedtls/sha256.h"
 #include "mbedtls/pk.h"
+#include "mbedtls/error.h"
 #include "esp_random.h"
 #include "freertos/FreeRTOS.h"
 #include "filesystem_hal.h"
+#include "esp_task_wdt.h"
 
 void cryptography_init(void) {
 }
 
 int _cryptography_fill_random(void* ctx, unsigned char *data, size_t len) {
     esp_fill_random(data, len);
-    return (int)len;
+    return 0;
 }
 
 
@@ -39,8 +41,9 @@ bool cryptography_rsa_generate(const char *private_filename,
                                const char *public_filename,
                                const char *uuid_filename) {
 
+    printf("%s\n", uuid_filename);
     FS_Remove(uuid_filename);
-    file_handle f = FS_Open(uuid_filename, "w");
+    file_handle f = FS_Open(uuid_filename, "wb");
     if (!f) {
         printf("Failed to open key UUID file\n");
         return false;
@@ -58,26 +61,29 @@ bool cryptography_rsa_generate(const char *private_filename,
 
     mbedtls_pk_context pk_ctx = {0};
     mbedtls_pk_init(&pk_ctx);
-    mbedtls_pk_setup( &pk_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
-    mbedtls_rsa_context *rsa = mbedtls_pk_rsa(pk_ctx);
-    //mbedtls_rsa_init(rsa, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256);
+    int result = mbedtls_pk_setup( &pk_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA) );
+    if (result != 0) {
+        printf("pk_setup failed: %i\n", result);
+    }
 
-    int result = mbedtls_rsa_gen_key(rsa, _cryptography_fill_random, NULL, 2048, 0x10001);
+    esp_task_wdt_init(30, false);
+    result = mbedtls_rsa_gen_key(mbedtls_pk_rsa(pk_ctx), _cryptography_fill_random, NULL, 2048, 0x10001);
     if (result != 0) {
         mbedtls_pk_free(&pk_ctx);
-        printf("RSA Generation error: %d", result);
+        printf("RSA Generation error: %d\n", result);
         return false;
     }
-    result = mbedtls_rsa_check_pub_priv(rsa, rsa);
+    result = mbedtls_rsa_check_pub_priv(mbedtls_pk_rsa(pk_ctx), mbedtls_pk_rsa(pk_ctx));
     if (result != 0) {
         mbedtls_pk_free(&pk_ctx);
-        printf("RSA validation error: %d", result);
+        printf("RSA validation error: %d\n", result);
+        return false;
     }
 
     unsigned char *key_data = pvPortMalloc(5000);
 
     FS_Remove(private_filename);
-    f = FS_Open(private_filename, "w");
+    f = FS_Open(private_filename, "wb");
     if (!f) {
         printf("Failed to open private key file\n");
         mbedtls_pk_free(&pk_ctx);
@@ -99,7 +105,7 @@ bool cryptography_rsa_generate(const char *private_filename,
     FS_Close(f);
 
     FS_Remove(public_filename);
-    f = FS_Open(public_filename, "w");
+    f = FS_Open(public_filename, "wb");
     if (!f) {
         printf("Failed to open public key file\n");
         mbedtls_pk_free(&pk_ctx);
@@ -152,12 +158,12 @@ bool cryptography_sign_rsa(const char* private_filename,
 
     mbedtls_pk_context pk_ctx = {0};
     mbedtls_pk_init(&pk_ctx);
-    mbedtls_pk_setup( &pk_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+    //mbedtls_pk_setup( &pk_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
 
     struct stat fstat;
-    FS_Stat(private_filename, &fstat);
-    file_handle f = FS_Open(private_filename, "r");
-    if (!f) {
+    int error = FS_Stat(private_filename, &fstat);
+
+    if (error) {
         printf("No PEM file for signing!\n");
         mbedtls_pk_free(&pk_ctx);
         return false;

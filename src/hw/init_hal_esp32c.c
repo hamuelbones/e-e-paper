@@ -20,6 +20,8 @@
 #define SPI_MOSI (GPIO_NUM_1)
 #define SPI_MISO (GPIO_NUM_2)
 
+#define BUTTON (GPIO_NUM_10)
+
 void HAL_Init(void) {
 
     /* Print chip information */
@@ -37,6 +39,21 @@ void HAL_Init(void) {
            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
+
+    gpio_config_t button = {
+        .intr_type = 0,
+        .mode = GPIO_MODE_INPUT,
+        .pin_bit_mask = 1<<BUTTON,
+        .pull_down_en = 0,
+        .pull_up_en = 1,
+    };
+    gpio_config(&button);
+    if (gpio_get_level(BUTTON) == 0) {
+        for (int i=0; i<120; i++) {
+            printf("Waiting for flash... %i\n", i);
+            vTaskDelay(1000/portTICK_PERIOD_MS);
+        }
+    }
 
     gpio_config_t chg_en = {
             .intr_type = 0,

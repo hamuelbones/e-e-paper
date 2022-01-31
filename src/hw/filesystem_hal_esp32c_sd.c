@@ -14,12 +14,9 @@
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
+#include "esp_spiffs.h"
 
 typedef void* file_handle;
-
-static void _full_path(const char* name, char* fullName, int len) {
-    snprintf(fullName, len, "%s/%s", SD_MOUNT_POINT, name);
-}
 
 #define GPIO_SD_CS (GPIO_NUM_8)
 static const char *TAG = "example";
@@ -29,15 +26,15 @@ int FS_Mount(void) {
 
     esp_err_t ret;
 
-    esp_vfs_fat_mount_config_t internal_mount_config = {
-            .max_files = 2,
-            .format_if_mount_failed = true,
-            .allocation_unit_size = 16*1024,
+    esp_vfs_spiffs_conf_t spiffs_conf = {
+        .base_path = INTERNAL_MOUNT_FOLDER,
+        .format_if_mount_failed = true,
+        .max_files = 2,
+        .partition_label = "fs",
     };
-    wl_handle_t fat_handle;
-    ret = esp_vfs_fat_spiflash_mount(INTERNAL_MOUNT_POINT, "fs", &internal_mount_config, &fat_handle);
+    ret = esp_vfs_spiffs_register(&spiffs_conf);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount internal flash partition.");
+        ESP_LOGE(TAG, "Failed to mount internal flash partition, %08x", ret);
         return -1;
     }
     ESP_LOGI(TAG, "Internal filesystem mounted");
@@ -57,7 +54,7 @@ int FS_Mount(void) {
     sdmmc_card_t *card;
     ESP_LOGI(TAG, "Mounting filesystem");
     // TODO recommended to do more proper SD card probing + partition mounting manually
-    ret = esp_vfs_fat_sdspi_mount(SD_MOUNT_POINT, &host, &slot_config, &sd_mount_config, &card);
+    ret = esp_vfs_fat_sdspi_mount(SD_MOUNT_FOLDER, &host, &slot_config, &sd_mount_config, &card);
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
@@ -81,10 +78,7 @@ void FS_Unmount(void) {
 }
 
 file_handle FS_Open(const char* name, const char* mode) {
-    char fullName[40];
-    _full_path(name, fullName, 40);
-    printf("%s\n", fullName);
-    return fopen(fullName, mode);
+    return fopen(name, mode);
 }
 int FS_Read(file_handle handle, void* buf, int len) {
     return (int) fread(buf, 1, len, handle);
@@ -96,32 +90,17 @@ int FS_Fseek(file_handle handle, int offset, int whence) {
     return fseek(handle, offset, whence);
 }
 int FS_Remove(const char* name) {
-    char fullName[40];
-    _full_path(name, fullName, 40);
-    return remove(fullName);
+    return remove(name);
 }
 int FS_Stat(const char* path, struct stat* fstat) {
-    char fullName[40];
-    _full_path(path, fullName, 40);
-    return (int) stat(fullName, fstat);
+    return (int) stat(path, fstat);
 }
 int FS_Close(file_handle handle) {
     return fclose(handle);
 }
 int FS_Rename(const char* old, const char* new) {
-    char full_old_name[40];
-    _full_path(old, full_old_name, 40);
-    char full_new_name[40];
-    _full_path(new, full_new_name, 40);
     return rename(old, new);
 }
 int FS_Feof(file_handle handle) {
     return feof(handle);
-}
-
-int FS_NumFiles() {
-    return 0;
-}
-int FS_NthFile(int n) {
-    return 0;
 }

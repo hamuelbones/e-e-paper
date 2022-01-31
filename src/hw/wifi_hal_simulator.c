@@ -287,7 +287,7 @@ bool WIFI_HttpGet(const char* host,
                         state = PARSE_HEADERS;
                         if (headers_filename) {
                             FS_Remove(headers_filename);
-                            header_file = FS_Open(headers_filename, "w");
+                            header_file = FS_Open(headers_filename, "wb");
                         }
                     }
                     break;
@@ -302,7 +302,7 @@ bool WIFI_HttpGet(const char* host,
                         }
                         if (response_filename) {
                             FS_Remove(response_filename);
-                            response_file = FS_Open(response_filename, "w");
+                            response_file = FS_Open(response_filename, "wb");
                         }
                     }
 

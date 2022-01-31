@@ -490,6 +490,12 @@ void _Noreturn app_main(void)
     uint8_t inbound_message[MAIN_MESSAGE_MAX_SIZE] = {0};
     MAIN_STATE current_state = MAIN_STATE_INIT;
 
+#if 0
+    while (1) {
+        vTaskDelay(100);
+    }
+#endif
+
     HAL_Init();
     FS_Mount();
 

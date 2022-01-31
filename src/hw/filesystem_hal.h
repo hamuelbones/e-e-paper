@@ -14,7 +14,9 @@
 #define REQUEST_TEMPORARY_FILENAME "temp.bin"
 
 #define SD_MOUNT_POINT "/sd/"
+#define SD_MOUNT_FOLDER "/sd"
 #define INTERNAL_MOUNT_POINT "/int/"
+#define INTERNAL_MOUNT_FOLDER "/int"
 
 typedef void* file_handle;
 
