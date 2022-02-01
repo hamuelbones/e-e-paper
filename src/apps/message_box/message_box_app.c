@@ -20,12 +20,20 @@ typedef struct {
     toml_table_t *startup_config;
     toml_table_t *app_config;
     toml_table_t *messages;
+    int selected_message;
 } MESSAGE_BOX_CONTEXT;
 
 typedef enum {
     MESSAGE_BOX_GET_MESSAGES,
     MESSAGE_BOX_DISPLAY
 } MESSAGE_BOX_STATE;
+
+typedef char* (substitution_value)(MESSAGE_BOX_CONTEXT*);
+
+typedef struct {
+    char * to_replace;
+    substitution_value *replacement;
+} TEXT_SUBSTITUTION;
 
 DRAW_FLAGS _parse_draw_flags(toml_table_t *table) {
 
@@ -51,6 +59,53 @@ DRAW_FLAGS _parse_draw_flags(toml_table_t *table) {
     return flags;
 }
 
+static char* _get_message_author(MESSAGE_BOX_CONTEXT *ctx) {
+
+    int idx = ctx->selected_message;
+    toml_array_t *array = toml_array_in(ctx->messages, "message");
+    if (!array) {
+        return "";
+    }
+
+    toml_table_t *message = toml_table_at(array, idx);
+    if (!message) {
+        return "";
+    }
+
+    toml_datum_t author = toml_string_in(message, "author");
+    if (!author.ok) {
+        return "";
+    }
+
+    return author.u.s;
+}
+
+static char* _get_message_content(MESSAGE_BOX_CONTEXT *ctx) {
+    int idx = ctx->selected_message;
+    toml_array_t *array = toml_array_in(ctx->messages, "message");
+    if (!array) {
+        return "";
+    }
+
+    toml_table_t *message = toml_table_at(array, idx);
+    if (!message) {
+        return "";
+    }
+
+    toml_datum_t text = toml_string_in(message, "message_text");
+    if (!text.ok) {
+        return "";
+    }
+
+    return text.u.s;
+}
+
+TEXT_SUBSTITUTION _substitutions[2] = {
+        {"!!MSG_BOX_AUTHOR!!", _get_message_author},
+        {"!!MSG_BOX_MESSAGE!!", _get_message_content}
+};
+
+
 void* message_box_init(toml_table_t *startup_config, toml_table_t * device_config) {
 
     MESSAGE_BOX_CONTEXT *context = pvPortMalloc(sizeof(MESSAGE_BOX_CONTEXT));
@@ -62,7 +117,7 @@ void* message_box_init(toml_table_t *startup_config, toml_table_t * device_confi
     return context;
 }
 
-void draw_texts(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
+void draw_texts(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
 
     toml_array_t *texts = toml_array_in(box, "text");
     if (!texts) {
@@ -119,17 +174,45 @@ void draw_texts(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
             }
         }
 
+        char *substituted_text = NULL;
         toml_datum_t value = toml_string_in(text, "value");
         if (value.ok) {
             render_string = value.u.s;
         }
 
+        for (int j=0; j<sizeof(_substitutions)/sizeof(TEXT_SUBSTITUTION); j++) {
+            // Todo - multiple substitutions? Probably an uncommon use case
+            char * to_replace = _substitutions[j].to_replace;
+            char * match_location = strstr(render_string, to_replace);
+            if (match_location) {
+                char * replacement = _substitutions[j].replacement(ctx);
+                size_t replacement_size = strlen(render_string) - strlen(to_replace) + strlen(replacement) + 1;
+
+                char * replacement_str = pvPortMalloc(replacement_size);
+                if (match_location > render_string) {
+                    memcpy(replacement_str, render_string, (match_location-render_string));
+                }
+                replacement_str[match_location-render_string] = '\0';
+                strcat(replacement_str, replacement);
+                strcat(replacement_str, &render_string[match_location-render_string+strlen(to_replace)]);
+
+                if (substituted_text) {
+                    vPortFree(substituted_text);
+                }
+                substituted_text = replacement_str;
+                render_string = replacement_str;
+            }
+        }
+
         DISPBUF_DrawMultiline(origin, render_string, font_id, bounds.x, bounds.y, flags);
+        if (substituted_text) {
+            vPortFree(substituted_text);
+        }
 
     }
 }
 
-void draw_symbols(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
+void draw_symbols(MESSAGE_BOX_CONTEXT *ctx, toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
 
     toml_array_t *symbols = toml_array_in(box, "symbol");
 
@@ -183,7 +266,7 @@ void draw_symbols(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
     }
 }
 
-void draw_subsections(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
+void draw_subsections(MESSAGE_BOX_CONTEXT *ctx, toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
 
     toml_array_t * sub_boxes = toml_array_in(box, "box");
 
@@ -218,15 +301,15 @@ void draw_subsections(toml_table_t *box, DISPLAY_COORD offset, DISPLAY_COORD dim
             sub_dims.y = width.u.i;
         }
 
-        void draw_section(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims);
-        draw_section(sub_box, sub_offset, sub_dims);
+        void draw_section(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims);
+        draw_section(ctx, sub_box, sub_offset, sub_dims);
     }
 }
 
-void draw_section(toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
-    draw_texts(box, offset, dims);
-    draw_symbols(box, offset, dims);
-    draw_subsections(box, offset, dims);
+void draw_section(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
+    draw_texts(ctx, box, offset, dims);
+    draw_symbols(ctx, box, offset, dims);
+    draw_subsections(ctx, box, offset, dims);
 }
 
 void message_box_process(void* context, uint8_t *message, size_t length) {
@@ -235,13 +318,21 @@ void message_box_process(void* context, uint8_t *message, size_t length) {
 
     printf("Message box process...\n");
 
+    appCtx->selected_message++;
+    toml_array_t* message_array = toml_array_in(appCtx->messages, "message");
+    if (appCtx->selected_message >= toml_array_nelem(message_array)) {
+        appCtx->selected_message = 0;
+    }
+
+    printf("Displaying message %d\n", appCtx->selected_message);
+
     DISPBUF_Swap();
     DISPBUF_ClearActive();
 
     toml_table_t *drawing_root = toml_table_in(appCtx->app_config, "render_root");
     DISPLAY_COORD offset = {0, 0};
     DISPLAY_COORD dims = {DISPLAY_WIDTH, DISPLAY_HEIGHT};
-    draw_section(drawing_root, offset, dims);
+    draw_section(appCtx, drawing_root, offset, dims);
 
     EPAPER_RenderBuffer(DISPBUF_ActiveBuffer(), DISPBUF_InactiveBuffer(), BUFFER_SIZE);
 }
@@ -255,5 +346,5 @@ APP_INTERFACE g_message_box_interface = {
     .app_init = message_box_init,
     .app_process = message_box_process,
     .app_deinit = message_box_deinit,
-    .refresh_rate_ms = 1000
+    .refresh_rate_ms = 10000
 };

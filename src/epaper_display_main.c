@@ -38,10 +38,6 @@
 uint32_t last_unix_time = 0;
 uint32_t current_resource_fetch_id = 0;
 
-#define AUTHOR_SUBSTITUTION_VALUE "!!MSG_BOX_AUTHOR!!"
-#define MESSAGE_SUBSTITUTION_VALUE "!!MSG_BOX_MESSAGE!!"
-
-
 typedef enum {
     // Check startup configuration
     MAIN_STATE_INIT,
