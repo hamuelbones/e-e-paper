@@ -1,0 +1,7 @@
+
+name = "EPaper Display Symbols"
+author = "Samuel Jones"
+
+[[character]]
+    index = 0
+    image = "qr.png"

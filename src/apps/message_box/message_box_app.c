@@ -113,6 +113,7 @@ void* message_box_init(toml_table_t *startup_config, toml_table_t * device_confi
     context->startup_config = startup_config;
     context->app_config = device_config;
     context->messages = toml_resource_get("messages");
+    context->selected_message = -1;
 
     return context;
 }

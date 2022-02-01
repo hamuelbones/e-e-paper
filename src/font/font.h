@@ -9,9 +9,9 @@
 #include <stdint.h>
 
 typedef struct {
+    const uint8_t *data;
     const uint8_t width;
     const uint8_t height;
-    const uint8_t *data;
 } FONT_CHARACTER;
 
 typedef struct {
