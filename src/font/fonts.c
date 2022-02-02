@@ -5,38 +5,35 @@
 #include "fonts.h"
 
 #include "headers/system_symbols.h"
-#include "headers/bitter-ht-10.h"
-#include "headers/bitter-ht-14.h"
-#include "headers/bitter-ht-16.h"
-#include "headers/bitter-ht-20.h"
-#include "headers/bitter-ht-24.h"
-#include "headers/bitter-ht-32.h"
-#include "headers/bitter-ht-40.h"
-#include "headers/bitter-ht-48.h"
+#include "headers/new-york-10.h"
+#include "headers/new-york-12.h"
+#include "headers/new-york-14.h"
+#include "headers/new-york-18.h"
+#include "headers/new-york-20.h"
+#include "headers/new-york-24.h"
+#include "headers/new-york-36.h"
 #include <string.h>
 
 const FONT_TABLE* fonts[FONT_MAX] = {
         [SYSTEM_SYMBOLS] = &font_System_Symbols,
-        [BITTER_PRO_10] = &font_Bitter_Pro_Regular_10,
-        [BITTER_PRO_14] = &font_Bitter_Pro_Regular_14,
-        [BITTER_PRO_16] = &font_Bitter_Pro_Regular_16,
-        [BITTER_PRO_20] = &font_Bitter_Pro_Regular_20,
-        [BITTER_PRO_24] = &font_Bitter_Pro_Regular_24,
-        [BITTER_PRO_32] = &font_Bitter_Pro_Regular_32,
-        [BITTER_PRO_40] = &font_Bitter_Pro_Regular_40,
-        [BITTER_PRO_48] = &font_Bitter_Pro_Regular_48,
+        [NEW_YORK_10] = &font_New_York_10,
+        [NEW_YORK_12] = &font_New_York_12,
+        [NEW_YORK_14] = &font_New_York_14,
+        [NEW_YORK_18] = &font_New_York_18,
+        [NEW_YORK_20] = &font_New_York_20,
+        [NEW_YORK_24] = &font_New_York_24,
+        [NEW_YORK_36] = &font_New_York_36,
 };
 
 const char* font_names[FONT_MAX] = {
         "SYSTEM_SYMBOLS",
-        "BITTER_PRO_10",
-        "BITTER_PRO_14",
-        "BITTER_PRO_16",
-        "BITTER_PRO_20",
-        "BITTER_PRO_24",
-        "BITTER_PRO_32",
-        "BITTER_PRO_40",
-        "BITTER_PRO_48",
+        "NEW_YORK_10",
+        "NEW_YORK_12",
+        "NEW_YORK_14",
+        "NEW_YORK_18",
+        "NEW_YORK_20",
+        "NEW_YORK_24",
+        "NEW_YORK_36",
 };
 
 const FONT_TABLE *FONT_GetTable(EPAPER_DISPLAY_FONT_ID id) {

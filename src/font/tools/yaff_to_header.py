@@ -17,6 +17,7 @@ def import_yaff(filename):
         parsing_character = False
         character_data = []
         character = ""
+        skip = False
 
         for line in f:
             line = line.strip()
@@ -50,7 +51,8 @@ def import_yaff(filename):
                     character_data = []
                     parsing_character = False
                 else:
-                    character_data.append(line)
+                    if "x" not in line:
+                        character_data.append(line)
 
     if parsing_character:
         font_data[character] = {
