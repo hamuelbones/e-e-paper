@@ -5,3 +5,6 @@ author = "Samuel Jones"
 [[character]]
     index = 0
     image = "qr.png"
+[[character]]
+    index = 1
+    image = "swirly.png"

@@ -30,7 +30,7 @@ def import_toml_data(filename: str):
 
         image_yaff_part = ""
         for line in image_array:
-            image_text = "".join(["." if px < 128 else "@" for px in line])
+            image_text = "".join(["." if px > 128 else "@" for px in line])
             image_yaff_part += "\t" + image_text + "\n"
 
         char_table["data"] = image_yaff_part

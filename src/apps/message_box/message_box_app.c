@@ -320,9 +320,65 @@ void draw_subsections(MESSAGE_BOX_CONTEXT *ctx, toml_table_t *box, DISPLAY_COORD
     }
 }
 
+void draw_rects(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
+
+    toml_array_t *rects = toml_array_in(box, "rect");
+
+    if (!rects) {
+        return;
+    }
+
+    int num_rects = toml_array_nelem(rects);
+
+    for (int i=0; i<num_rects; i++) {
+        toml_table_t *rect = toml_table_at(rects, i);
+        if (!rect) {
+            continue;
+        }
+        toml_datum_t x_offset = toml_int_in(rect, "x");
+        toml_datum_t y_offset = toml_int_in(rect, "y");
+        toml_datum_t width = toml_int_in(rect, "width");
+        toml_datum_t height = toml_int_in(rect, "height");
+        toml_datum_t thickness = toml_int_in(rect, "thickness");
+        toml_datum_t fill = toml_bool_in(rect, "filled");
+        toml_datum_t notched = toml_bool_in(rect, "notched");
+
+        DISPLAY_COORD rect_offset = offset;
+        if (x_offset.ok) {
+            rect_offset.x += x_offset.u.i;
+        }
+        if (y_offset.ok) {
+            rect_offset.y += y_offset.u.i;
+        }
+
+        if (!thickness.ok) {
+            thickness.u.i = 1;
+        }
+        if (!width.ok) {
+            width.u.i = thickness.u.i;
+        }
+        if (!height.ok) {
+            height.u.i = thickness.u.i;
+        }
+        if (!fill.ok) {
+            fill.u.b = 0;
+        }
+        if (!notched.ok) {
+            notched.u.b = 0;
+        }
+
+        DISPLAY_COORD bottom_right = {
+            .x = rect_offset.x + width.u.i - 1,
+            .y = rect_offset.y + height.u.i - 1
+        };
+        DISPBUF_DrawRect(rect_offset, bottom_right, thickness.u.i, fill.u.b, notched.u.b);
+    }
+}
+
 void draw_section(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offset, DISPLAY_COORD dims) {
     draw_texts(ctx, box, offset, dims);
     draw_symbols(ctx, box, offset, dims);
+    draw_rects(ctx, box, offset, dims);
     draw_subsections(ctx, box, offset, dims);
 }
 

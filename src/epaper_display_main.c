@@ -180,7 +180,7 @@ static bool _refresh_resource(int num) {
     toml_datum_t dir = toml_string_in(resource_info, "dir");
     toml_datum_t auth = toml_bool_in(resource_info, "auth");
 
-    if (standalone) {
+    if (standalone || (!host.ok || !dir.ok)) {
         // Just load the resource
         uint8_t message = MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY;
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
@@ -380,7 +380,10 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
 
     switch(message[0]) {
         case MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY: {
-            int16_t status = message[1] | (message[2] << 8);
+            int16_t status = 0;
+            if (len >= 3) {
+                status = message[1] | (message[2] << 8);
+            }
 
             toml_array_t* resources = toml_array_in(toml_resource_get("config"), "resource");
             toml_table_t* resource_info = toml_table_at(resources, (int)current_resource_fetch_id);

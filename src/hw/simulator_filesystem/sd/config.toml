@@ -2,135 +2,103 @@
 [application]
 name = "message_box"
 
-
 [[resource]]
 name = "messages"
-host = "127.0.0.1:8000"
+host = "192.168.1.162:8000"
 dir = "/dev_api/message_box/2/"
 local_filename = "message_box.toml"
 auth = true
 
-
-#[[resource]]
-#name = "symbols"
-#url = "127.0.0.1:8000/dev_api/symbols"
-#local_name = "symbols.toml"
-#auth = true
+[[resource]]
+name = "wedding_symbols"
+local_filename = "custom_font.fbin"
 
 [render_root]
-	[[render_root.symbol]]
-		x = 50
-		y = 50
-		max_width = 50
-		max_height = 50
-		right = true
-		bottom = true
-		id = 0
-	[[render_root.symbol]]
-		x = 50
-		y = 50
-		max_width = 50
-		max_height= 50
-		right=true
-		id = 1
-	[[render_root.symbol]]
-		x = 50
-		y = 50
-		max_width = 50
-		max_height = 50
-		vertical_center = true
-		horizontal_center = true
-		id = 2
-	[[render_root.symbol]]
-		x = 50
-		y = 50
-		max_width = 50
-		max_height = 50
-		bottom = true
-		id = 3
-	[[render_root.text]]
-		y = 100
-		width = 800
-		height = 250
-		vertical_center = true
-		horizontal_center = true
-		value = "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n1234567890\n!#$%?.,_-+=/\\()[]{}|\"'"
-		font = "BITTER_PRO_48"
+    [[render_root.rect]]
+        x = 0
+        y = 0
+        width = 800
+        height = 480
+        thickness = 2
+        notched = true
+    [[render_root.rect]]
+        x = 534
+        y = 40
+        width = 2
+        height = 400
+        thickness = 2
 	[[render_root.box]] # small region on the right of the screen
-		x = 600
+		x = 534
 		y = 0
-		width = 200
+		width = 266
 		height = 480
 		[[render_root.box.text]]
-			y = 100
-			width = 200
-			height = 250
+			y = 0
+			width = 266
+			height = 200
 			vertical_center = true
 			horizontal_center = true
-			value = "Brandon\n&\nKenzie"
-			font = "BITTER_PRO_48"
+			value = "Kenzie\n&\nBrandon"
+			font = "NEW_YORK_36"
 		[[render_root.box.text]]
-			y = 250
-			width = 200
-			height = 100
+			y = 180
+			width = 266
+			height = 50
 			vertical_center = true
 			horizontal_center = true
 			value = "02 . 05 . 2022"
-			font = "BITTER_PRO_24"
+			font = "NEW_YORK_24"
 		[[render_root.box.text]]
 			y = 250
-			width = 200
-			height = 100
+			width = 266
+			height = 50
 			vertical_center = true
 			horizontal_center = true
-			value = "leave a message!"
-			font = "BITTER_PRO_24"
-		[[render_root.box.image]]
-			y = 250
-			width = 200
-			height = 100
-			vertical_center = true
-			horizontal_center = true
-			value = "!!BROB_KENZ_QR_CODE!!"
+			value = "leave a message :)"
+			font = "NEW_YORK_18"
+        [[render_root.box.symbol]]
+            y = 300
+            max_width = 266
+            max_height = 100
+            vertical_center = true
+            horizontal_center = true
+            id = 0
+            font = "wedding_symbols"
 		[[render_root.box.text]]
 			y = 350
-			width = 200
+			width = 266
 			height = 100
 			bottom = true
 			horizontal_center = true
 			value = "hambones.app/\nthisisnotapuzzle"
-			font = "BITTER_PRO_24"
+			font = "NEW_YORK_18"
 
 	[[render_root.box]] # big region on the left of the screen
 		x = 0
 		y = 0
-		width = 600
+		width = 534
 		height = 480
+		[[render_root.box.symbol]]
+		    id = 1
+		    y = 280
+			max_width = 525
+			max_height = 32
+            horizontal_center = true
+            font = "wedding_symbols"
 		[[render_root.box.text]]
-			x = 0
-			y = 0
-			width = 200
-			height = 480
-			vertical_center = true
+		    x = 5
+		    y = 324
+			width = 524
+			height = 60
 			horizontal_center = true
-			value = "!!MSG_BOX_AUTHOR!!"
-			font = "BITTER_PRO_24"
+			value = "- !!MSG_BOX_AUTHOR!!"
+			font = "NEW_YORK_20"
 		[[render_root.box.text]]
-			x = 200
-			y = 0
-			width = 200
-			height = 100
-			vertical_center = true
+			x = 5
+			y = 5
+			width = 524
+			height = 260
+			bottom = true
 			horizontal_center = true
 			value = "!!MSG_BOX_MESSAGE!!"
-			font = "BITTER_PRO_24"
-		# Add: separator between author and text
-
-		# To do: more decorative stuff?
-
-	[[render_root.box]] # Vertical Divider between the two regions
-		x = 590
-		y = 0
-		width = 20
-		height = 480
-		# To do: render? with rectangles
+			font = "NEW_YORK_20"
