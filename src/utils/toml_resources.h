@@ -8,8 +8,8 @@
 #ifndef EPAPER_DISPLAY_TOML_RESOURCES_H
 #define EPAPER_DISPLAY_TOML_RESOURCES_H
 
-// Future enhancement: make this dynamic and non-singleton
-#define MAX_TOML_RESOURCES (10)
+// TODO Future enhancement: make this dynamic and non-singleton
+#define MAX_TOML_RESOURCES (5)
 
 typedef struct {
     char* name;

@@ -20,7 +20,9 @@ typedef enum {
     FONT_MAX,
 } EPAPER_DISPLAY_FONT_ID;
 
-const FONT_CHARACTER *FONT_GetBitmap(EPAPER_DISPLAY_FONT_ID id, int c);
+const FONT_TABLE *FONT_GetTable(EPAPER_DISPLAY_FONT_ID id);
+const FONT_CHARACTER *FONT_GetBitmap(const FONT_TABLE *font, int c);
 const char* FONT_GetName(EPAPER_DISPLAY_FONT_ID id);
+const FONT_TABLE *FONT_TableForName(const char* name);
 
 #endif //EPAPER_DISPLAY_FONTS_H

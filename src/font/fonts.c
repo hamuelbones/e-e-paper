@@ -13,6 +13,7 @@
 #include "headers/bitter-ht-32.h"
 #include "headers/bitter-ht-40.h"
 #include "headers/bitter-ht-48.h"
+#include <string.h>
 
 const FONT_TABLE* fonts[FONT_MAX] = {
         [SYSTEM_SYMBOLS] = &font_System_Symbols,
@@ -38,9 +39,12 @@ const char* font_names[FONT_MAX] = {
         "BITTER_PRO_48",
 };
 
-const FONT_CHARACTER *FONT_GetBitmap(EPAPER_DISPLAY_FONT_ID id, int c) {
+const FONT_TABLE *FONT_GetTable(EPAPER_DISPLAY_FONT_ID id) {
+    return fonts[id];
+}
 
-    const FONT_TABLE *font = fonts[id];
+const FONT_CHARACTER *FONT_GetBitmap(const FONT_TABLE *font, int c) {
+
     if ((c < font->code_base) || (c >= font->code_base+font->code_length)) {
         return NULL;
     }
@@ -54,4 +58,16 @@ const char* FONT_GetName(EPAPER_DISPLAY_FONT_ID id) {
         return NULL;
     }
     return font_names[id];
+}
+
+const FONT_TABLE *FONT_TableForName(const char* name) {
+
+    for (int i=0; i<FONT_MAX; i++) {
+        const char *font_name = FONT_GetName(i);
+        if (strcmp(font_name, name) == 0) {
+            return FONT_GetTable(i);
+        }
+    }
+
+    return NULL;
 }

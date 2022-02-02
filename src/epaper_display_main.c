@@ -20,6 +20,7 @@
 #include "cryptography_hal.h"
 #include "file_utils.h"
 #include "toml_resources.h"
+#include "font_resources.h"
 #include "cryptography_hal.h"
 #include "jwt.h"
 #include "epaper_display_main.h"
@@ -179,7 +180,13 @@ static bool _refresh_resource(int num) {
     toml_datum_t dir = toml_string_in(resource_info, "dir");
     toml_datum_t auth = toml_bool_in(resource_info, "auth");
 
-    _issue_get_request(host.u.s, dir.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, auth.u.b);
+    if (standalone) {
+        // Just load the resource
+        uint8_t message = MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
+    } else {
+        _issue_get_request(host.u.s, dir.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, auth.u.b);
+    }
 
     return true;
 }
@@ -255,8 +262,6 @@ static int _load_config_file(void) {
     if (resources) {
         current_resource_fetch_id = 0;
         _refresh_resource(current_resource_fetch_id);
-
-        printf("Fetching resources specified in configuration file\n");
         return MAIN_STATE_REFRESH_RESOURCES;
     }
 
@@ -363,13 +368,6 @@ static int _state_refresh_config(uint8_t *message, size_t len) {
 
             // May load resources if necessary
             int next_state = _load_config_file();
-            if (standalone && (next_state == MAIN_STATE_REFRESH_RESOURCES)) {
-                // Should not hit network in standalone mode!
-                next_state = MAIN_STATE_RUN_APP;
-                uint8_t message = MAIN_MESSAGE_APP_INIT;
-                xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
-            }
-
             return next_state;
         }
         default:
@@ -417,7 +415,15 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
             // Move file from SD to internal
             file_copy(to, from);
 
-            toml_resource_load(to, resource_name.u.s);
+            // TODO support dots in filenames
+            char * extension = strrchr(to, '.');
+            if (extension) {
+                if (strcmp(extension, ".toml") == 0) {
+                    toml_resource_load(to, resource_name.u.s);
+                } else if (strcmp(extension, ".fbin") == 0) {
+                    font_resource_load(to, resource_name.u.s);
+                }
+            }
 
             current_resource_fetch_id++;
             if (_refresh_resource(current_resource_fetch_id)) {
@@ -462,6 +468,7 @@ static int _state_run_app(uint8_t *message, size_t len) {
                     xTimerChangePeriod(_currentAppTimer, current_app->refresh_rate_ms/portTICK_PERIOD_MS, portMAX_DELAY);
                 }
                 xTimerStart(_currentAppTimer, portMAX_DELAY);
+                _app_timer_callback(NULL);
             }
         }
             break;

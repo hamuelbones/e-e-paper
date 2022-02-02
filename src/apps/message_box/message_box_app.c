@@ -13,6 +13,7 @@
 #include "display_draw_geometry.h"
 #include "display_draw_text.h"
 #include "toml_resources.h"
+#include "font_resources.h"
 
 #include <string.h>
 
@@ -135,7 +136,6 @@ void draw_texts(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
         DISPLAY_COORD origin = offset;
         DISPLAY_COORD bounds = dims;
         DRAW_FLAGS flags = 0;
-        EPAPER_DISPLAY_FONT_ID font_id = BITTER_PRO_10;
         char *render_string = "";
 
         toml_datum_t x_offset = toml_int_in(text, "x");
@@ -160,18 +160,17 @@ void draw_texts(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
         flags = _parse_draw_flags(text);
 
         toml_datum_t font = toml_string_in(text, "font");
+
+        // sensible default
+        const FONT_TABLE *font_table = FONT_TableForName("BITTER_PRO_24");
+
         if (font.ok) {
-            int j = 0;
-            while (true) {
-                const char *font_name = FONT_GetName(j);
-                if (!font_name) {
-                    break;
-                }
-                if (strcmp(font_name, font.u.s) == 0) {
-                    font_id = j;
-                    break;
-                }
-                j++;
+            font_table = FONT_TableForName(font.u.s);
+            if (!font_table) {
+                font_table = font_resource_get(font.u.s);
+            }
+            if (font_table == NULL) {
+                printf("Couldn't find font: %s", font.u.s);
             }
         }
 
@@ -205,7 +204,7 @@ void draw_texts(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
             }
         }
 
-        DISPBUF_DrawMultiline(origin, render_string, font_id, bounds.x, bounds.y, flags);
+        DISPBUF_DrawMultiline(origin, render_string, font_table, bounds.x, bounds.y, flags);
         if (substituted_text) {
             vPortFree(substituted_text);
         }
@@ -257,9 +256,23 @@ void draw_symbols(MESSAGE_BOX_CONTEXT *ctx, toml_table_t *box, DISPLAY_COORD off
             symbol_id = id.u.i;
         }
 
+        const FONT_TABLE * font_to_use = FONT_GetTable(SYSTEM_SYMBOLS);
+
+        toml_datum_t font = toml_string_in(symbol, "font");
+        if (font.ok) {
+            font_to_use = FONT_TableForName(font.u.s);
+            if (!font_to_use) {
+                font_to_use = font_resource_get(font.u.s);
+            }
+            if (font_to_use == NULL) {
+                printf("Couldn't find font: %s", font.u.s);
+                font_to_use = FONT_GetTable(SYSTEM_SYMBOLS);
+            }
+        }
+
         flags = _parse_draw_flags(symbol);
 
-        const FONT_CHARACTER *c = FONT_GetBitmap(SYSTEM_SYMBOLS, symbol_id);
+        const FONT_CHARACTER *c = FONT_GetBitmap(font_to_use, symbol_id);
         if (c) {
             DISPLAY_COORD symbol_size = {.x=c->width, .y=c->height};
             DISPBUF_DrawBitmap(origin, symbol_size, bounds, c->data, flags);

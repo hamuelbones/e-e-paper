@@ -9,15 +9,15 @@
 #include <stdint.h>
 
 typedef struct {
-    const uint8_t *data;
-    const uint8_t width;
-    const uint8_t height;
+    uint8_t *data;
+    uint8_t width;
+    uint8_t height;
 } FONT_CHARACTER;
 
 typedef struct {
     uint16_t code_base;
     uint16_t code_length;
-    const FONT_CHARACTER** characters;
+    FONT_CHARACTER** characters;
 } FONT_TABLE;
 
 #endif //EPAPER_DISPLAY_FONT_H
