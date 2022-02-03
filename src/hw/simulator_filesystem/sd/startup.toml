@@ -2,8 +2,8 @@
 mode = "online"
 
 [[wifi]]
-ssid = "ham"
-password = "smokyradio"
+ssid = "network"
+password = "test_password"
 
 [server]
 host = "192.168.1.162:8000"

@@ -4,7 +4,8 @@
 
 #include <filesystem_hal.h>
 
-const char* filesystem_base = "/Users/ham/hack/epaper-display/src/hw/simulator_filesystem/";
+// TODO make this relative or configurable
+const char* filesystem_base = "/Users/ham/src/e-e-paper/src/hw/simulator_filesystem/";
 
 static void _full_path(const char* name, char* fullName, int len) {
     snprintf(fullName, len, "%s%s", filesystem_base, name);
