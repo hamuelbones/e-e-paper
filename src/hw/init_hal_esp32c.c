@@ -107,3 +107,7 @@ void HAL_Print(const char *format, ...) {
 
     va_end(args);
 }
+
+void HAL_Reboot(void) {
+    esp_restart();
+}

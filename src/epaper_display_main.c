@@ -14,6 +14,7 @@
 #include "freertos/timers.h"
 
 #include "wifi_task.h"
+#include "wifi_hal.h"
 #include "display_task.h"
 #include "filesystem_hal.h"
 #include "toml.h"
@@ -66,7 +67,9 @@ typedef enum {
     MAIN_MESSAGE_TIME_SYNC_FAILED,
     MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY,
     MAIN_MESSAGE_APP_INIT,
+    MAIN_MESSAGE_TRIGGER_REFRESH,
     MAIN_MESSAGE_APP,
+    MAIN_MESSAGE_REBOOT,
 } MAIN_STATE_MESSAGE;
 
 typedef enum {
@@ -82,6 +85,7 @@ static const APP_INTERFACE *_apps[NUMBER_OF_APPS] = {
 
 static void* _currentAppContext = NULL;
 static xTimerHandle _currentAppTimer = NULL;
+static xTimerHandle _refreshTimer = NULL;
 static bool standalone = false;
 
 static char jwt_header[600];
@@ -95,6 +99,11 @@ bool _generate_jwt_signature_rsa(void* params, const uint8_t *message, size_t le
 static void _app_timer_callback(TimerHandle_t timer) {
     uint8_t message[2] = {MAIN_MESSAGE_APP, MAIN_APP_TIMER_PROC};
     xMessageBufferSend(message_buffer, &message, 2, 0);
+}
+
+static void _refresh_callback(TimerHandle_t timer) {
+    uint8_t message[1] = {MAIN_MESSAGE_TRIGGER_REFRESH};
+    xMessageBufferSend(message_buffer, &message, 1, 0);
 }
 
 static void _handle_connection(void* params, void* response) {
@@ -201,23 +210,31 @@ static int _load_startup_file(void) {
 
     if (!file_exists(INTERNAL_MOUNT_POINT STARTUP_FILENAME)) {
         printf("No TOML file in internal storage!\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
         return MAIN_STATE_INIT_ERROR;
     }
 
     if (!toml_resource_load(INTERNAL_MOUNT_POINT STARTUP_FILENAME, "startup")) {
         printf("Failed to load startup TOML\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
         return MAIN_STATE_INIT_ERROR;
     }
 
     toml_table_t *startup_config = toml_resource_get("startup");
     if (!startup_config) {
         printf("Failed to load startup TOML from resource list\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
         return MAIN_STATE_INIT_ERROR;
     }
 
     toml_datum_t mode = toml_string_in(startup_config, "mode");
     if (!mode.ok) {
         printf("Mode unspecified\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
         return MAIN_STATE_INIT_ERROR;
     }
 
@@ -237,11 +254,11 @@ static int _load_startup_file(void) {
                 .cb = _handle_connection,
         };
         xMessageBufferSend(wifi_message_buffer(), &request, sizeof(request), portMAX_DELAY);
-
-
         return MAIN_STATE_CONNECT;
     } else {
         printf("Unknown run mode\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
         return MAIN_STATE_INIT_ERROR;
     }
 
@@ -253,6 +270,8 @@ static int _load_config_file(void) {
     toml_table_t *device_config = toml_resource_get("config");
     if (!device_config) {
         printf("Toml config file load error\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
         return MAIN_STATE_INIT_ERROR;
     }
 
@@ -281,6 +300,13 @@ static int _state_init(uint8_t *message, size_t len)  {
     return -1;
 }
 
+static int _state_init_failure(uint8_t* message, size_t len) {
+    printf("Init error, rebooting in 20 seconds...");
+    vTaskDelay(20000/portTICK_PERIOD_MS);
+    HAL_Reboot();
+    return -1;
+}
+
 static int _state_connect(uint8_t *message, size_t len) {
     switch(message[0]) {
         case MAIN_MESSAGE_WIFI_CONNECTED: {
@@ -296,8 +322,14 @@ static int _state_connect(uint8_t *message, size_t len) {
         }
             // NEXT THING: Send message to wifi task!
             return MAIN_STATE_SYNC_TIME;
-        case MAIN_MESSAGE_WIFI_CONNECT_FAILED:
-            return MAIN_STATE_INIT_ERROR;
+        case MAIN_MESSAGE_WIFI_CONNECT_FAILED: {
+            printf("Couldn't connect to WiFi");
+            standalone = true;
+            uint8_t message = MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY;
+            xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
+
+            return MAIN_STATE_REFRESH_CONFIG;
+        }
     }
     return -1;
 }
@@ -324,12 +356,16 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
             toml_table_t *server = toml_table_in(startup, "server");
             if (!server) {
                 printf("No server configuration found.\n");
+                char message = MAIN_MESSAGE_REBOOT;
+                xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
                 return MAIN_STATE_INIT_ERROR;
             }
             toml_datum_t host, subdirectory;
             host = toml_string_in(server, "host");
             if (!host.ok) {
                 printf("No server hostname provided for configuration.\n");
+                char message = MAIN_MESSAGE_REBOOT;
+                xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
                 return MAIN_STATE_INIT_ERROR;
             }
             subdirectory = toml_string_in(server, "config_dir");
@@ -342,7 +378,13 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
             return MAIN_STATE_REFRESH_CONFIG;
         }
         case MAIN_MESSAGE_TIME_SYNC_FAILED:
-            return MAIN_STATE_SYNC_TIME;
+            if (WIFI_Connected()) {
+                WIFI_REQUEST request = {};
+                request.type = WIFI_DISCONNECT;
+                xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
+            }
+            toml_resource_unload_all();
+            return _load_startup_file();
     }
     return -1;
 }
@@ -456,6 +498,11 @@ static int _state_run_app(uint8_t *message, size_t len) {
 
             toml_table_t *startup_config = toml_resource_get("startup");
 
+            // Done with WiFi!
+            WIFI_REQUEST request = {};
+            request.type = WIFI_DISCONNECT;
+            xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
+
             for (int i=0; i<NUMBER_OF_APPS; i++) {
                 if (strcmp(app_name.u.s, _apps[i]->name) == 0) {
                     current_app = _apps[i];
@@ -471,6 +518,10 @@ static int _state_run_app(uint8_t *message, size_t len) {
                     xTimerChangePeriod(_currentAppTimer, current_app->refresh_rate_ms/portTICK_PERIOD_MS, portMAX_DELAY);
                 }
                 xTimerStart(_currentAppTimer, portMAX_DELAY);
+
+                if (_refreshTimer) {
+                    _refreshTimer = xTimerCreate("Ref", 30*60*1000/portTICK_PERIOD_MS, pdTRUE, NULL, _refresh_callback);
+                }
                 _app_timer_callback(NULL);
             }
         }
@@ -479,6 +530,16 @@ static int _state_run_app(uint8_t *message, size_t len) {
             if (current_app) {
                 current_app->app_process(_currentAppContext, message+1, len-1);
             }
+            return -1;
+        }
+        case MAIN_MESSAGE_TRIGGER_REFRESH: {
+            if (current_app) {
+                current_app->app_deinit(_currentAppContext);
+                xTimerStop(_currentAppTimer, portMAX_DELAY);
+            }
+            font_resource_unload_all();
+            toml_resource_unload_all();
+            return _load_startup_file();
         }
         default:
             break;
@@ -488,7 +549,7 @@ static int _state_run_app(uint8_t *message, size_t len) {
 
 static int (*_main_states[MAIN_STATE_MAX])(uint8_t * message, size_t len) = {
         [MAIN_STATE_INIT] = _state_init,
-        // Init Error
+        [MAIN_STATE_INIT_ERROR] = _state_init_failure,
         // Safe Mode
         [MAIN_STATE_CONNECT] = _state_connect,
         [MAIN_STATE_SYNC_TIME] = _state_refresh_time,

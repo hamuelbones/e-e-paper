@@ -9,4 +9,6 @@ void HAL_Init(void);
 
 void HAL_Print(const char *format, ...);
 
+void HAL_Reboot(void);
+
 #endif //EPAPER_DISPLAY_INIT_HAL_H

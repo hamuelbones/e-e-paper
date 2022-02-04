@@ -54,3 +54,8 @@ void EPAPER_RenderBuffer(const uint8_t *buffer, const uint8_t *old_buffer, size_
         gtk_buffer[i*3+2] = val;
     }
 }
+
+
+void HAL_Reboot(void) {
+    exit(0);
+}

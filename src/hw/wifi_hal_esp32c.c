@@ -1,5 +1,6 @@
 
 #include <string.h>
+#include <stdbool.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -15,6 +16,8 @@
 
 static EventGroupHandle_t _event_group;
 static TimerHandle_t _timeout_timer;
+static bool connection_desired;
+static bool connected;
 
 typedef enum {
     ESP_WIFI_CONNECTED = (1<<0),
@@ -34,6 +37,7 @@ static void stop_timeout_timer(void) {
     xTimerStop(_timeout_timer, portMAX_DELAY);
 }
 
+static int reconnect_count;
 static void event_handler(void* arg, esp_event_base_t event_base,
                           int32_t event_id, void* event_data)
 {
@@ -43,9 +47,16 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_STOP) {
         xEventGroupSetBits(_event_group, ESP_WIFI_STOPPED);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        if (connection_desired && (reconnect_count < 5)) {
+            esp_wifi_connect();
+        } else {
+            reconnect_count = 0;
+            connected = false;
+            xEventGroupSetBits(_event_group, ESP_WIFI_DISCONNECTED);
+        }
         esp_wifi_connect();
-        //xEventGroupSetBits(_event_group, ESP_WIFI_DISCONNECTED);
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        connected = true;
         xEventGroupSetBits(_event_group, ESP_WIFI_CONNECTED);
     }
 }
@@ -108,6 +119,7 @@ bool WIFI_Connect(const char* ssid, const char* password) {
     strncpy((char*)wifi_config.sta.ssid, ssid, 31);
     strncpy((char*)wifi_config.sta.password, password, 61);
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
+    connection_desired = true;
     esp_wifi_connect();
 
     // Wait for connection
@@ -133,6 +145,7 @@ bool WIFI_Connect(const char* ssid, const char* password) {
 void WIFI_Disconnect(void) {
     wifi_ap_record_t station_info;
     esp_err_t err = esp_wifi_sta_get_ap_info(&station_info);
+    connection_desired = false;
     if (err != ESP_ERR_WIFI_NOT_CONNECT) {
         esp_wifi_disconnect();
         xEventGroupWaitBits(_event_group, ESP_WIFI_DISCONNECTED,
@@ -244,10 +257,20 @@ uint32_t WIFI_GetNetworkTime(const char* host) {
 
     xEventGroupClearBits(_event_group, ESP_WIFI_TIME_SYNC);
     EventBits_t bits = xEventGroupWaitBits(_event_group, ESP_WIFI_TIME_SYNC,
-                                           true, false, portMAX_DELAY);
+                                           true, false, 20000/portTICK_PERIOD_MS);
 
     printf("Unix time: %u\t", _time.tv_sec);
 
     sntp_stop();
-    return _time.tv_sec;
+
+    if (bits & ESP_WIFI_TIME_SYNC) {
+        return _time.tv_sec;
+    } else {
+        return 0;
+    }
+}
+
+
+bool WIFI_Connected(void) {
+    return true;
 }
