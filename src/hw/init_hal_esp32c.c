@@ -5,6 +5,7 @@
 #include "sdkconfig.h"
 #include "esp_system.h"
 #include "esp_spi_flash.h"
+#include "esp_pm.h"
 
 #include "nvs_flash.h"
 #include "driver/gpio.h"
@@ -95,6 +96,12 @@ void HAL_Init(void) {
 
     ret = spi_bus_initialize(SPI2_HOST, &busConfig, SPI_DMA_CH_AUTO);
     ESP_ERROR_CHECK(ret);
+
+    esp_pm_config_esp32c3_t power_config;
+    power_config.light_sleep_enable = true;
+    power_config.min_freq_mhz = 40;
+    power_config.max_freq_mhz = CONFIG_ESP32C3_DEFAULT_CPU_FREQ_MHZ;
+    esp_pm_configure(&power_config);
 
 }
 
