@@ -9,12 +9,12 @@
 #ifndef EPAPER_DISPLAY_DISPLAY_DRAW_GEOMETRY_H
 #define EPAPER_DISPLAY_DISPLAY_DRAW_GEOMETRY_H
 
-void DISPBUF_DrawPoint(uint16_t x, uint16_t y);
-void DISPBUF_ClearPoint(uint16_t x, uint16_t y);
-void DISPBUF_DrawHorizontalLine(uint16_t y, uint16_t x1, uint16_t x2);
-void DISPBUF_DrawVerticalLine(uint16_t x, uint16_t y1, uint16_t y2);
+void dispbuf_draw_point(uint16_t x, uint16_t y);
+void dispbuf_clear_point(uint16_t x, uint16_t y);
+void dispbuf_draw_horizontal_line(uint16_t y, uint16_t x1, uint16_t x2);
+void dispbuf_draw_vertical_line(uint16_t x, uint16_t y1, uint16_t y2);
 
-void DISPBUF_DrawRect(DISPLAY_COORD upper_left, DISPLAY_COORD bottom_right, int width, bool filled, bool notched);
+void dispbuf_draw_rect(DISPLAY_COORD upper_left, DISPLAY_COORD bottom_right, int width, bool filled, bool notched);
 
 
 #endif //EPAPER_DISPLAY_DISPLAY_DRAW_GEOMETRY_H

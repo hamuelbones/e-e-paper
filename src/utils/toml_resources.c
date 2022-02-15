@@ -16,9 +16,9 @@ bool toml_resource_load(const char* file_name, const char* resource_name) {
     }
 
     struct stat s;
-    FS_Stat(file_name, &s);
+    fs_stat(file_name, &s);
     printf("Loading resource: %s, len: %d\n", file_name, s.st_size);
-    file_handle f = FS_Open(file_name, "r");
+    file_handle f = fs_open(file_name, "r");
     if (!f) {
         return false;
     }
@@ -26,7 +26,7 @@ bool toml_resource_load(const char* file_name, const char* resource_name) {
     char toml_error_msg[100];
     toml_table_t *table = toml_parse_file(f, toml_error_msg, 100);
     if (!table) {
-        FS_Close(f);
+        fs_close(f);
         return false;
     }
 
@@ -40,7 +40,7 @@ bool toml_resource_load(const char* file_name, const char* resource_name) {
     new_res->table = table;
 
     _tomlResources.count++;
-    FS_Close(f);
+    fs_close(f);
     return true;
 }
 

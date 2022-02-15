@@ -18,7 +18,7 @@ static TaskHandle_t _displayHandle;
 
 void _Noreturn display_task(void* params) {
 
-    EPAPER_Init();
+    epaper_init();
 
     while (1) {
         vTaskDelay(100 * 1000 / configTICK_RATE_HZ);

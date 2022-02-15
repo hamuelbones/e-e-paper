@@ -16,30 +16,30 @@ static bool DISPBUF_IsNewline(char c) {
 }
 
 static int DISPBUF_FontHeight(const FONT_TABLE* font) {
-    const FONT_CHARACTER *bitmap = FONT_GetBitmap(font, ' ');
+    const FONT_CHARACTER *bitmap = font_get_bitmap(font, ' ');
     if (!bitmap) {
         return 0;
     }
     return bitmap->height;
 }
 
-int DISPBUF_DrawCharacter(DISPLAY_COORD cursor, char c, const FONT_TABLE* font, DRAW_FLAGS flags) {
-    const FONT_CHARACTER *bitmap = FONT_GetBitmap(font, c);
+int dispbuf_draw_character(DISPLAY_COORD cursor, char c, const FONT_TABLE* font, DRAW_FLAGS flags) {
+    const FONT_CHARACTER *bitmap = font_get_bitmap(font, c);
     if (!bitmap) {
         return 0;
     }
     if (!(flags & DRAW_MEASURE)) {
         DISPLAY_COORD bitmap_size = {.x=bitmap->width, .y=bitmap->height};
-        DISPBUF_DrawBitmap(cursor, bitmap_size, bitmap_size, bitmap->data, 0);
+        dispbuf_draw_bitmap(cursor, bitmap_size, bitmap_size, bitmap->data, 0);
     }
     return bitmap->width;
 }
 
-int DISPBUF_DrawLabel(DISPLAY_COORD cursor, const char*s, const FONT_TABLE* font, DRAW_FLAGS flags) {
+int dispbuf_draw_label(DISPLAY_COORD cursor, const char*s, const FONT_TABLE* font, DRAW_FLAGS flags) {
     int cur_offset = 0;
 
     while (*s != 0) {
-        int char_width = DISPBUF_DrawCharacter(cursor, *s, font, flags);
+        int char_width = dispbuf_draw_character(cursor, *s, font, flags);
         cur_offset += char_width;
         cursor.x += char_width;
         s++;
@@ -48,13 +48,13 @@ int DISPBUF_DrawLabel(DISPLAY_COORD cursor, const char*s, const FONT_TABLE* font
     return cur_offset;
 }
 
-int DISPBUF_DrawLabelWithSize(DISPLAY_COORD cursor,
+int dispbuf_draw_labelWithSize(DISPLAY_COORD cursor,
                              const char*s, size_t len,
                              const FONT_TABLE* font,
                              DRAW_FLAGS flags) {
     int cur_offset = 0;
     while (len--) {
-        int char_width = DISPBUF_DrawCharacter(cursor, *s, font, flags);
+        int char_width = dispbuf_draw_character(cursor, *s, font, flags);
         cur_offset += char_width;
         cursor.x += char_width;
         s++;
@@ -68,7 +68,7 @@ int DISPBUF_DrawWord(DISPLAY_COORD cursor,
                      DRAW_FLAGS flags) {
     int cur_offset = 0;
     while (!DISPBUF_IsWhitespace(*s) && *s != '\0') {
-        int char_width = DISPBUF_DrawCharacter(cursor, *s, font, flags);
+        int char_width = dispbuf_draw_character(cursor, *s, font, flags);
         cur_offset += char_width;
         cursor.x += char_width;
         s++;
@@ -76,7 +76,7 @@ int DISPBUF_DrawWord(DISPLAY_COORD cursor,
     return cur_offset;
 }
 
-int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* font,
+int dispbuf_draw_text(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* font,
                           uint16_t max_x, uint16_t max_y, DRAW_FLAGS flags) {
 
     // TODO: need to reduce complexity and potentially break down this function.
@@ -86,7 +86,7 @@ int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, const FONT_TABLE*
     if (flags & (DRAW_JUSTIFY_VERT_CENTER | DRAW_JUSTIFY_VERT_BOTTOM)) {
         DRAW_FLAGS measure_flags = (flags & ~(DRAW_JUSTIFY_VERT_CENTER | DRAW_JUSTIFY_VERT_BOTTOM)) | DRAW_MEASURE;
         int y_size = DISPBUF_FontHeight(font) *
-                     DISPBUF_DrawMultiline(cursor, s, font, max_x, max_y, measure_flags);
+                     dispbuf_draw_text(cursor, s, font, max_x, max_y, measure_flags);
 
         if (flags & DRAW_JUSTIFY_VERT_CENTER) {
             y_offset = (max_y-y_size)/2;
@@ -126,7 +126,7 @@ int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, const FONT_TABLE*
                 break;
             } else if (DISPBUF_IsWhitespace(*line_end)) {
                 // Safe to draw whitespace as measure only in all scenarios
-                line_pix_length += DISPBUF_DrawCharacter(current_cursor, *line_end, font, flags | DRAW_MEASURE);
+                line_pix_length += dispbuf_draw_character(current_cursor, *line_end, font, flags | DRAW_MEASURE);
                 line_end++;
                 continue;
             } else {
@@ -142,7 +142,7 @@ int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, const FONT_TABLE*
                     // real big word. Need to apply wrapping so we can continue!
                     if (word_pix_length > max_x) {
                         while (line_pix_length < max_x) {
-                            int char_len = DISPBUF_DrawCharacter(current_cursor, *line_end, font, flags | DRAW_MEASURE);
+                            int char_len = dispbuf_draw_character(current_cursor, *line_end, font, flags | DRAW_MEASURE);
                             if (char_len + line_pix_length < max_x) {
                                 line_pix_length += char_len;
                                 line_end++;
@@ -164,7 +164,7 @@ int DISPBUF_DrawMultiline(DISPLAY_COORD cursor, const char *s, const FONT_TABLE*
             current_cursor.x += (max_x - line_pix_length);
         }
 
-        DISPBUF_DrawLabelWithSize(current_cursor, line_draw_start, line_draw_end-line_draw_start, font, flags);
+        dispbuf_draw_labelWithSize(current_cursor, line_draw_start, line_draw_end-line_draw_start, font, flags);
 
         chars_drawn += line_end - line_draw_start;
         lines_drawn += 1;

@@ -5,7 +5,7 @@
 #include "display_draw_image.h"
 #include "display_draw_geometry.h"
 
-void DISPBUF_DrawBitmap(DISPLAY_COORD cursor,
+void dispbuf_draw_bitmap(DISPLAY_COORD cursor,
                         DISPLAY_COORD bitmap_size,
                         DISPLAY_COORD bitmap_bounds,
                         const uint8_t *bitmap,
@@ -43,9 +43,9 @@ void DISPBUF_DrawBitmap(DISPLAY_COORD cursor,
             }
 
             if (bitmap[byte_offset+i/8] & (1<<(7-i%8))) {
-                DISPBUF_DrawPoint(image_x, image_y);
+                dispbuf_draw_point(image_x, image_y);
             } else {
-                DISPBUF_ClearPoint(image_x, image_y);
+                dispbuf_clear_point(image_x, image_y);
             }
         }
     }
@@ -55,9 +55,9 @@ void DISPBUF_DrawBitmap(DISPLAY_COORD cursor,
         int byte_offset = ((bitmap_size.x + 7) / 8)*(j-cursor.y);
         for (int i=cursor.x; i<cursor.x+bitmap_size.x; i++) {
             if (bitmap[byte_offset+(i-cursor.x)/8] & (1<<(7-(i-cursor.x)%8))) {
-                DISPBUF_DrawPoint(i, j);
+                dispbuf_draw_point(i, j);
             } else {
-                DISPBUF_ClearPoint(i, j);
+                dispbuf_clear_point(i, j);
             }
         }
     }

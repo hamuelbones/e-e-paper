@@ -27,11 +27,11 @@ typedef struct {
 
 #define BUFFER_SIZE (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8)
 
-void DISPBUF_Swap(void);
-void DISPBUF_ClearActive(void);
+void dispbuf_swap(void);
+void dispbuf_clear_active(void);
 
-uint8_t * DISPBUF_ActiveBuffer(void);
-uint8_t * DISPBUF_InactiveBuffer(void);
+uint8_t * dispbuf_active_buffer(void);
+uint8_t * dispbuf_inactive_buffer(void);
 
 
 #endif //EPAPER_DISPLAY_DISPLAY_BUFFER_H

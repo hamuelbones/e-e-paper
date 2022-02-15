@@ -17,7 +17,7 @@ void _Noreturn wifi_task(void* params) {
 
 
     message_buffer = xMessageBufferCreate(WIFI_MESSAGE_BUFFER_SIZE);
-    WIFI_Init();
+    wifi_init();
 
     while (1) {
         WIFI_REQUEST request = {0};
@@ -45,7 +45,7 @@ void _Noreturn wifi_task(void* params) {
                     }
 
                     printf("Connecting to Wifi router: %s\n", ssid.u.s);
-                    if (WIFI_Connect(ssid.u.s, password.ok ? password.u.s : NULL)) {
+                    if (wifi_connect(ssid.u.s, password.ok ? password.u.s : NULL)) {
                         // success
                         printf("Connection successful\n");
                         succeeded = true;
@@ -59,7 +59,7 @@ void _Noreturn wifi_task(void* params) {
                 break;
             }
             case WIFI_DISCONNECT:
-                WIFI_Disconnect();
+                wifi_disconnect();
                 if (request.cb) {
                     request.cb(request.cb_params, NULL);
                 }
@@ -70,7 +70,7 @@ void _Noreturn wifi_task(void* params) {
                        "\thost:%s\n"
                        "\tdir:%s\n",
                        request.get.host, request.get.subdirectory);
-                bool succeeded = WIFI_HttpGet(request.get.host,
+                bool succeeded = wifi_http_get(request.get.host,
                                               request.get.subdirectory,
                                               (const char**)request.get.headers,
                                               request.get.header_count,
@@ -85,7 +85,7 @@ void _Noreturn wifi_task(void* params) {
             }
                 break;
             case WIFI_SYNC_TIME: {
-                uint32_t time = WIFI_GetNetworkTime(request.sync_time.url);
+                uint32_t time = wifi_get_ntp(request.sync_time.url);
                 if (request.cb) {
                     WIFI_SYNC_TIME_RESPONSE response = {.unix_time = time};
                     request.cb(request.cb_params, &response);

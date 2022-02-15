@@ -16,24 +16,24 @@ bool font_resource_load(const char* file_name, const char* resource_name) {
     }
 
     struct stat s;
-    FS_Stat(file_name, &s);
+    fs_stat(file_name, &s);
     printf("Loading resource: %s, len: %d\n", file_name, s.st_size);
-    file_handle f = FS_Open(file_name, "rb");
+    file_handle f = fs_open(file_name, "rb");
     if (!f) {
         return false;
     }
 
     char magic[4] = {0};
-    FS_Read(f, magic, 4);
+    fs_read(f, magic, 4);
     if (strncmp(magic, "FBIN", 4) != 0) {
         printf("Magic marker didn't match\n");
-        FS_Close(f);
+        fs_close(f);
         return false;
     }
 
     int16_t base = 0, num_characters = 0;
-    FS_Read(f, &base, 2);
-    FS_Read(f, &num_characters, 2);
+    fs_read(f, &base, 2);
+    fs_read(f, &num_characters, 2);
     printf("Importing font - base char: %d, number of chars: %d\n", base, num_characters);\
 
     FONT_TABLE *table = pvPortMalloc(sizeof(FONT_TABLE));
@@ -45,17 +45,17 @@ bool font_resource_load(const char* file_name, const char* resource_name) {
 
     for (int i=0; i<num_characters; i++) {
         uint32_t char_base = 8 + i * 8;
-        FS_Fseek(f, (int)char_base, SEEK_SET);
+        fs_fseek(f, (int)char_base, SEEK_SET);
 
         table->characters[i] = pvPortMalloc(sizeof(FONT_CHARACTER));
-        FS_Read(f, (unsigned char*)&table->characters[i]->width, 2);
-        FS_Read(f, (unsigned char*)&table->characters[i]->height, 2);
+        fs_read(f, (unsigned char*)&table->characters[i]->width, 2);
+        fs_read(f, (unsigned char*)&table->characters[i]->height, 2);
         uint32_t data_size = ((table->characters[i]->width + 7) / 8) * table->characters[i]->height;
         uint32_t section_offset = 0;
-        FS_Read(f, &section_offset, 4);
-        FS_Fseek(f, (int)(section_offset + data_offset), SEEK_SET);
+        fs_read(f, &section_offset, 4);
+        fs_fseek(f, (int)(section_offset + data_offset), SEEK_SET);
         table->characters[i]->data = pvPortMalloc(data_size);
-        FS_Read(f, table->characters[i]->data, (int)data_size);
+        fs_read(f, table->characters[i]->data, (int)data_size);
     }
 
 
@@ -69,7 +69,7 @@ bool font_resource_load(const char* file_name, const char* resource_name) {
     new_res->font = table;
 
     _font_resources.count++;
-    FS_Close(f);
+    fs_close(f);
     return true;
 }
 

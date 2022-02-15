@@ -303,7 +303,7 @@ static int _state_init(uint8_t *message, size_t len)  {
 static int _state_init_failure(uint8_t* message, size_t len) {
     printf("Init error, rebooting in 20 seconds...");
     vTaskDelay(20000/portTICK_PERIOD_MS);
-    HAL_Reboot();
+    app_hal_reboot();
     return -1;
 }
 
@@ -378,7 +378,7 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
             return MAIN_STATE_REFRESH_CONFIG;
         }
         case MAIN_MESSAGE_TIME_SYNC_FAILED:
-            if (WIFI_Connected()) {
+            if (wifi_connected()) {
                 WIFI_REQUEST request = {};
                 request.type = WIFI_DISCONNECT;
                 xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
@@ -399,8 +399,8 @@ static int _state_refresh_config(uint8_t *message, size_t len) {
 
             if (status == 200) {
                 // Move file to correct location on SD
-                FS_Remove(SD_MOUNT_POINT APP_CONFIG_FILENAME);
-                FS_Rename(SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, SD_MOUNT_POINT APP_CONFIG_FILENAME);
+                fs_remove(SD_MOUNT_POINT APP_CONFIG_FILENAME);
+                fs_rename(SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, SD_MOUNT_POINT APP_CONFIG_FILENAME);
             }
 
             // Move file from SD to internal
@@ -450,7 +450,7 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
             snprintf(to, 60, "%s%s", SD_MOUNT_POINT, name.u.s);
             if (status == 200) {
                 // Move file to correct location on SD
-                FS_Remove(to);
+                fs_remove(to);
                 file_copy(to, from);
             }
 
@@ -570,8 +570,8 @@ void _Noreturn app_main(void)
     }
 #endif
 
-    HAL_Init();
-    FS_Mount();
+    app_hal_init();
+    fs_mount();
 
     // TODO What if there is not an SD card? need to use internal only
     cryptography_init();
@@ -580,7 +580,7 @@ void _Noreturn app_main(void)
     }
 
     toml_set_memutil(pvPortMalloc, vPortFree);
-    toml_set_futil( FS_Feof, toml_fs_read);
+    toml_set_futil( fs_feof, toml_fs_read);
 
     message_buffer = xMessageBufferCreate(MAIN_MESSAGE_BUFFER_SIZE);
     uint8_t startMessage = MAIN_MESSAGE_LOAD_STARTUP;
@@ -605,7 +605,3 @@ void _Noreturn app_main(void)
     }
 }
 
-
-MessageBufferHandle_t MAIN_GetMessageBuffer(void) {
-    return message_buffer;
-}

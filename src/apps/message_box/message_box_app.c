@@ -162,10 +162,10 @@ void draw_texts(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
         toml_datum_t font = toml_string_in(text, "font");
 
         // sensible default
-        const FONT_TABLE *font_table = FONT_TableForName("BITTER_PRO_24");
+        const FONT_TABLE *font_table = font_get_table_for_name("BITTER_PRO_24");
 
         if (font.ok) {
-            font_table = FONT_TableForName(font.u.s);
+            font_table = font_get_table_for_name(font.u.s);
             if (!font_table) {
                 font_table = font_resource_get(font.u.s);
             }
@@ -204,7 +204,7 @@ void draw_texts(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
             }
         }
 
-        DISPBUF_DrawMultiline(origin, render_string, font_table, bounds.x, bounds.y, flags);
+        dispbuf_draw_text(origin, render_string, font_table, bounds.x, bounds.y, flags);
         if (substituted_text) {
             vPortFree(substituted_text);
         }
@@ -256,26 +256,26 @@ void draw_symbols(MESSAGE_BOX_CONTEXT *ctx, toml_table_t *box, DISPLAY_COORD off
             symbol_id = id.u.i;
         }
 
-        const FONT_TABLE * font_to_use = FONT_GetTable(SYSTEM_SYMBOLS);
+        const FONT_TABLE * font_to_use = font_get_table(SYSTEM_SYMBOLS);
 
         toml_datum_t font = toml_string_in(symbol, "font");
         if (font.ok) {
-            font_to_use = FONT_TableForName(font.u.s);
+            font_to_use = font_get_table_for_name(font.u.s);
             if (!font_to_use) {
                 font_to_use = font_resource_get(font.u.s);
             }
             if (font_to_use == NULL) {
                 printf("Couldn't find font: %s", font.u.s);
-                font_to_use = FONT_GetTable(SYSTEM_SYMBOLS);
+                font_to_use = font_get_table(SYSTEM_SYMBOLS);
             }
         }
 
         flags = _parse_draw_flags(symbol);
 
-        const FONT_CHARACTER *c = FONT_GetBitmap(font_to_use, symbol_id);
+        const FONT_CHARACTER *c = font_get_bitmap(font_to_use, symbol_id);
         if (c) {
             DISPLAY_COORD symbol_size = {.x=c->width, .y=c->height};
-            DISPBUF_DrawBitmap(origin, symbol_size, bounds, c->data, flags);
+            dispbuf_draw_bitmap(origin, symbol_size, bounds, c->data, flags);
         }
     }
 }
@@ -371,7 +371,7 @@ void draw_rects(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
             .x = rect_offset.x + width.u.i - 1,
             .y = rect_offset.y + height.u.i - 1
         };
-        DISPBUF_DrawRect(rect_offset, bottom_right, thickness.u.i, fill.u.b, notched.u.b);
+        dispbuf_draw_rect(rect_offset, bottom_right, thickness.u.i, fill.u.b, notched.u.b);
     }
 }
 
@@ -396,15 +396,15 @@ void message_box_process(void* context, uint8_t *message, size_t length) {
 
     printf("Displaying message %d\n", appCtx->selected_message);
 
-    DISPBUF_Swap();
-    DISPBUF_ClearActive();
+    dispbuf_swap();
+    dispbuf_clear_active();
 
     toml_table_t *drawing_root = toml_table_in(appCtx->app_config, "render_root");
     DISPLAY_COORD offset = {0, 0};
     DISPLAY_COORD dims = {DISPLAY_WIDTH, DISPLAY_HEIGHT};
     draw_section(appCtx, drawing_root, offset, dims);
 
-    EPAPER_RenderBuffer(DISPBUF_ActiveBuffer(), DISPBUF_InactiveBuffer(), BUFFER_SIZE);
+    epaper_render_buffer(dispbuf_active_buffer(), dispbuf_inactive_buffer(), BUFFER_SIZE);
 }
 
 void message_box_deinit(void* context) {

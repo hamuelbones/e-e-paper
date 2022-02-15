@@ -15,19 +15,19 @@ static uint8_t _buffer2[BUFFER_SIZE];
 
 static uint8_t* _activeBuf = _buffer1;
 
-void DISPBUF_ClearActive(void) {
+void dispbuf_clear_active(void) {
     memset(_activeBuf, 0x00, BUFFER_SIZE);
 }
 
-uint8_t * DISPBUF_ActiveBuffer(void) {
+uint8_t * dispbuf_active_buffer(void) {
     return _activeBuf;
 }
 
-uint8_t * DISPBUF_InactiveBuffer(void) {
+uint8_t * dispbuf_inactive_buffer(void) {
     return _activeBuf == _buffer1 ? _buffer2 : _buffer1;
 }
 
-void DISPBUF_Swap(void) {
+void dispbuf_swap(void) {
     if (_activeBuf == _buffer1) {
         _activeBuf = _buffer2;
     } else {
