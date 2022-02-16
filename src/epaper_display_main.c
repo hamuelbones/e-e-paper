@@ -184,7 +184,6 @@ static bool _refresh_resource(int num) {
         return false;
     }
 
-    toml_datum_t name = toml_string_in(resource_info, "local_filename");
     toml_datum_t host = toml_string_in(resource_info, "host");
     toml_datum_t dir = toml_string_in(resource_info, "dir");
     toml_datum_t auth = toml_bool_in(resource_info, "auth");
@@ -348,7 +347,7 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
             jwt_add_string(jwt, JWT_HEADER, "kid", uuid);
             strcpy(jwt_header, "Authorization: Bearer ");
             size_t offset = strlen(jwt_header);
-            size_t token_size = jwt_serialize(jwt, jwt_header+offset, 600-offset);
+            jwt_serialize(jwt, jwt_header+offset, 600-offset);
 
             jwt_destroy(jwt);
 

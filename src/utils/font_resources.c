@@ -17,7 +17,7 @@ bool font_resource_load(const char* file_name, const char* resource_name) {
 
     struct stat s;
     fs_stat(file_name, &s);
-    printf("Loading resource: %s, len: %d\n", file_name, s.st_size);
+    printf("Loading resource: %s, len: %lld\n", file_name, s.st_size);
     file_handle f = fs_open(file_name, "rb");
     if (!f) {
         return false;
@@ -55,7 +55,7 @@ bool font_resource_load(const char* file_name, const char* resource_name) {
         fs_read(f, &section_offset, 4);
         fs_fseek(f, (int)(section_offset + data_offset), SEEK_SET);
         table->characters[i]->data = pvPortMalloc(data_size);
-        fs_read(f, table->characters[i]->data, (int)data_size);
+        fs_read(f, (void*)table->characters[i]->data, (int)data_size);
     }
 
 
@@ -90,7 +90,7 @@ bool font_resource_unload_all() {
         vPortFree(_font_resources.resource[i].name);
 
         for (int j = 0; j < _font_resources.resource[i].font->code_length; j++) {
-            vPortFree(_font_resources.resource[i].font->characters[i]->data);
+            vPortFree((void*)_font_resources.resource[i].font->characters[i]->data);
             vPortFree(&_font_resources.resource[i].font->characters[i]);
         }
         vPortFree(_font_resources.resource[i].font->characters);

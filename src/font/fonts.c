@@ -36,11 +36,11 @@ const char* font_names[FONT_MAX] = {
         "NEW_YORK_36",
 };
 
-const FONT_TABLE *FONT_GetTable(EPAPER_DISPLAY_FONT_ID id) {
+const FONT_TABLE *font_get_table(EPAPER_DISPLAY_FONT_ID id) {
     return fonts[id];
 }
 
-const FONT_CHARACTER *FONT_GetBitmap(const FONT_TABLE *font, int c) {
+const FONT_CHARACTER *font_get_bitmap(const FONT_TABLE *font, int c) {
 
     if ((c < font->code_base) || (c >= font->code_base+font->code_length)) {
         return NULL;
@@ -50,19 +50,19 @@ const FONT_CHARACTER *FONT_GetBitmap(const FONT_TABLE *font, int c) {
 }
 
 
-const char* FONT_GetName(EPAPER_DISPLAY_FONT_ID id) {
+const char* font_get_name(EPAPER_DISPLAY_FONT_ID id) {
     if (id >= FONT_MAX) {
         return NULL;
     }
     return font_names[id];
 }
 
-const FONT_TABLE *FONT_TableForName(const char* name) {
+const FONT_TABLE *font_get_table_for_name(const char* name) {
 
     for (int i=0; i<FONT_MAX; i++) {
-        const char *font_name = FONT_GetName(i);
+        const char *font_name = font_get_name(i);
         if (strcmp(font_name, name) == 0) {
-            return FONT_GetTable(i);
+            return font_get_table(i);
         }
     }
 

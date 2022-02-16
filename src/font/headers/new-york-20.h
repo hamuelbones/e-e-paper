@@ -5355,6 +5355,6 @@ static const FONT_CHARACTER * tab_New_York_20[] = {
 const FONT_TABLE font_New_York_20 = {
     .code_base = 0,
     .code_length = 256,
-    .characters = tab_New_York_20,
+    .characters = (FONT_CHARACTER**) tab_New_York_20,
 };
 

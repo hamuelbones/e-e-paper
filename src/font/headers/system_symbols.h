@@ -137,6 +137,6 @@ static const FONT_CHARACTER * tab_System_Symbols[] = {
 const FONT_TABLE font_System_Symbols = {
     .code_base = 0,
     .code_length = 4,
-    .characters = tab_System_Symbols,
+    .characters = (FONT_CHARACTER**) tab_System_Symbols,
 };
 

@@ -17,7 +17,7 @@ bool toml_resource_load(const char* file_name, const char* resource_name) {
 
     struct stat s;
     fs_stat(file_name, &s);
-    printf("Loading resource: %s, len: %d\n", file_name, s.st_size);
+    printf("Loading resource: %s, len: %lld\n", file_name, s.st_size);
     file_handle f = fs_open(file_name, "r");
     if (!f) {
         return false;

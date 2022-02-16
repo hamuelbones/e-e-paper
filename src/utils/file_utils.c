@@ -28,7 +28,7 @@ bool file_copy(const char* to, const char* from) {
         char read_chunk[64];
         int read_len = fs_read(in_f, read_chunk, 64);
         if (read_len > 0) {
-            int write_len = fs_write(out_f, read_chunk, read_len);
+            fs_write(out_f, read_chunk, read_len);
         }
     }
 
@@ -41,7 +41,7 @@ bool file_copy(const char* to, const char* from) {
     fs_stat(from, &in_stat);
     fs_stat(to, &out_stat);
 
-    printf("File copy: old size: %d, new size: %d\n",
+    printf("File copy: old size: %lld, new size: %lld\n",
            in_stat.st_size, out_stat.st_size);
 
     // Files same size - assume file copy was successful.

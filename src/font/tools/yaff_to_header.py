@@ -123,7 +123,7 @@ def export_header(filename, metadata, data):
         f.write(f"const FONT_TABLE font_{base_name} = {{\n")
         f.write(f"    .code_base = {base},\n")
         f.write(f"    .code_length = {length},\n")
-        f.write(f"    .characters = tab_{base_name},\n")
+        f.write(f"    .characters = (FONT_CHARACTER**) tab_{base_name},\n")
         f.write(f"}};\n\n")
 
 
