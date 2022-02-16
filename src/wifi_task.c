@@ -77,7 +77,7 @@ void _Noreturn wifi_task(void* params) {
                                               request.get.headers_filename,
                                               request.get.response_filename,
                                               &status);
-                printf("Response status: %u\n", status);
+                printf("Response status(%b): %u\n", succeeded, status);
                 if (request.cb) {
                     WIFI_GET_RESPONSE response = {.status = status};
                     request.cb(request.cb_params, &response);
