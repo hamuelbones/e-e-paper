@@ -1,37 +1,89 @@
-## Welcome to GitHub Pages
+---
+layout: default
+---
 
-You can use the [editor on GitHub](https://github.com/hamuelbones/e-e-paper/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+# ESP-32 battery-powered ePaper Display
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Key feature set
 
-### Markdown
+* Internet connectivity and main processing using an esp32c3 module
+* Output to a 28-pin Waveshare e-Paper display module (currently black/white only)
+* Ability to run on a lithium battery and charging over USB
+* High degree of configurability using toml files
+* Can run standalone just getting data from an SD card or online
+* Customization via editing `.toml` configuration files on the SD card/server
+* Flashing over USB and, in the future, over-the-air updates
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+## Applications
 
-```markdown
-Syntax highlighted code block
+The display can or can be configured to show the following things:
 
-# Header 1
-## Header 2
-### Header 3
+* Message Box: fetches a list of messages from a server and rotates through displaying them
+* TODO: Weather forecasts
+* TODO: A simple clock
+* TODO: A calendar display app
 
-- Bulleted
-- List
+The project status is largely in flux and currently in a proof-of-concept state. Lots may change!
 
-1. Numbered
-2. List
+## Where to go from here
 
-**Bold** and _Italic_ and `Code` text
+If you'd like an introduction to using the device, take a look the [user guide](user_guide.html).
 
-[Link](url) and ![Image](src)
-```
+For more information on building and modifying the firmware, see the [build guide](build.html).
 
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
+If running the display in online mode, connecting it to a server application will allow you to create
+dynamic message boxes, and update configuration files remotely. Note the display is fully functional
+even when running offline; changes just need to be made to files on the SD card.
 
-### Jekyll Themes
+TODO: Add link to server repo
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/hamuelbones/e-e-paper/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+It is possible to clone the repository and run an instance of it yourself. Soon, it will be possible
+to sign up for a (paid) account as an alternative.
 
-### Support or Contact
+# Building
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+## Dependencies
+
+The project is built using CMake.
+
+
+You'll need these if building the simulator target:
+
+* pkg-config
+* GTK+3
+* OpenSSL
+
+The hardware target needs
+
+Aside from these, the firmware depends on the following projects.
+
+* tomlc99
+* monobit / hoard of bitfonts
+* freeRTOS and the POSIX port
+
+## Native/Simulator Target
+
+## Hardware Target
+
+# Hardware files
+
+For reference, the output schematics and fabrication files (gerbers) from the initial schematics
+are provided.
+
+That said, there are a litany of small and large changes that will be fixed with a new design:
+
+* The pinout of the connector and display are in reverse order, so the board folds in the
+  wrong/unintended direction in an enclosure.
+* The LDO layout was not done to allow for the variant of the LDO with an enable pin
+* The power/charging circuitry can probably be re-done to have lower quiescent power draw and
+  be easier to hand-solder.
+* Proper battery terminals should be added. On v1 the battery connection is done to test points.
+* It would be nice to have some sort of mounting holes in the board.
+* One footprint is of an improper size (0603 when 0805 was intended)
+* Footprints in general can probably be adjusted for easier hand soldering.
+* It would be nice to also support the larger display connector and parallel interfaces,
+  since larger displays drop support for 1-wire SPI.
+* The SD card holder placement can be adjusted to be more flush to the edge of the board.
+
+With the new design, the project files will be better structured to be repository-friendly,
+and KiCad project files will be added
