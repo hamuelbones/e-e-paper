@@ -1,6 +1,7 @@
 //
 // Created by Samuel Jones on 1/10/22.
 //
+// jwt - utilities for creating tokens JSON web tokens for authorization
 
 #include <string.h>
 #include <stdint.h>

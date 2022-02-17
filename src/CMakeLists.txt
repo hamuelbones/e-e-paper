@@ -1,7 +1,7 @@
 
 if(SIMULATOR)
     set(CMAKE_VERBOSE_MAKEFILE ON)
-    add_executable(epaper_display epaper_display_main.c epaper_display_simulator_main.c bluetooth_task.c display_task.c wifi_task.c)
+    add_executable(epaper_display epaper_display_main.c epaper_display_simulator_main.c wifi_task.c)
     target_include_directories(epaper_display PUBLIC .)
 
     # Use the package PkgConfig to detect GTK+ headers/library files
@@ -31,7 +31,7 @@ if(SIMULATOR)
     add_subdirectory(utils)
 else()
     idf_component_register(
-            SRCS "epaper_display_main.c" "bluetooth_task.c" "display_task.c" "wifi_task.c"
+            SRCS "epaper_display_main.c" "wifi_task.c"
             INCLUDE_DIRS "." "apps/"
             REQUIRES font display hw tomlc99 message_box utils
     )

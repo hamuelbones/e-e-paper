@@ -1,6 +1,7 @@
 //
 // Created by Samuel Jones on 2/1/22.
 //
+// font_resources - loading and unloading font files into font tables
 
 #include <stdbool.h>
 #include "toml.h"
@@ -12,7 +13,6 @@
 // TODO Future enhancement: make this dynamic and non-singleton
 // TODO Merge with font resources code
 #define MAX_FONT_RESOURCES (5)
-
 
 typedef struct {
     char* name;
