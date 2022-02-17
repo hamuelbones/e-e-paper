@@ -15,7 +15,6 @@
 
 #include "wifi_task.h"
 #include "wifi_hal.h"
-#include "display_task.h"
 #include "filesystem_hal.h"
 #include "toml.h"
 #include "cryptography_hal.h"
@@ -586,7 +585,6 @@ void _Noreturn app_main(void)
     xMessageBufferSend(message_buffer, &startMessage, 1, portMAX_DELAY);
 
     wifi_task_start();
-    display_task_start();
 
     while (1) {
         size_t rx_size = xMessageBufferReceive(message_buffer, inbound_message, MAIN_MESSAGE_MAX_SIZE, portMAX_DELAY);
