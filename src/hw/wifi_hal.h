@@ -3,12 +3,12 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-void WIFI_Init(void);
+void wifi_init(void);
 
-bool WIFI_Connect(const char* ssid, const char* password);
-void WIFI_Disconnect(void);
+bool wifi_connect(const char* ssid, const char* password);
+void wifi_disconnect(void);
 
-bool WIFI_HttpGet(const char* host,
+bool wifi_http_get(const char* host,
                   const char* subdirectory,
                   const char** headers,
                   size_t header_count,
@@ -17,6 +17,6 @@ bool WIFI_HttpGet(const char* host,
                   const char* response_filename,
                   int *status);
 
-bool WIFI_Connected(void);
+bool wifi_connected(void);
 
-uint32_t WIFI_GetNetworkTime(const char* host);
+uint32_t wifi_get_ntp(const char* host);

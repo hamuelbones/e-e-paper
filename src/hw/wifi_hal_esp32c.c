@@ -67,7 +67,7 @@ static void timeout_handler(TimerHandle_t xTimer) {
 
 
 
-void WIFI_Init(void) {
+void wifi_init(void) {
 
     _timeout_timer = xTimerCreate("wifi_tmo", 100, false, NULL, timeout_handler);
     _event_group = xEventGroupCreate();
@@ -101,7 +101,7 @@ void WIFI_Init(void) {
     sntp_init();
 }
 
-bool WIFI_Connect(const char* ssid, const char* password) {
+bool wifi_connect(const char* ssid, const char* password) {
 
     wifi_config_t wifi_config = {
             .sta = {
@@ -142,7 +142,7 @@ bool WIFI_Connect(const char* ssid, const char* password) {
     return true;
 }
 
-void WIFI_Disconnect(void) {
+void wifi_disconnect(void) {
     wifi_ap_record_t station_info;
     esp_err_t err = esp_wifi_sta_get_ap_info(&station_info);
     connection_desired = false;
@@ -155,7 +155,7 @@ void WIFI_Disconnect(void) {
     }
 }
 
-bool WIFI_HttpGet(const char* host,
+bool wifi_http_get(const char* host,
                   const char* subdirectory,
                   const char** headers,
                   size_t header_count,
@@ -203,7 +203,7 @@ bool WIFI_HttpGet(const char* host,
     }
     *status = esp_http_client_get_status_code(handle);
 
-    file_handle f = FS_Open(response_filename, "wb");
+    file_handle f = fs_open(response_filename, "wb");
     if (!f) {
         printf("Couldn't open response file!\n");
         esp_http_client_close(handle);
@@ -218,10 +218,10 @@ bool WIFI_HttpGet(const char* host,
         }
         int data_read = esp_http_client_read_response(handle, buffer, 128);
         if (data_read >= 0) {
-            FS_Write(f, buffer, data_read);
+            fs_write(f, buffer, data_read);
         }
     }
-    FS_Close(f);
+    fs_close(f);
     esp_http_client_close(handle);
     esp_http_client_cleanup(handle);
 
@@ -237,7 +237,7 @@ void _time_sync_notification(struct timeval *tv) {
 
 
 char *cur_ntp_server;
-uint32_t WIFI_GetNetworkTime(const char* host) {
+uint32_t wifi_get_ntp(const char* host) {
 
     if (cur_ntp_server) {
         vPortFree(cur_ntp_server);
@@ -271,6 +271,6 @@ uint32_t WIFI_GetNetworkTime(const char* host) {
 }
 
 
-bool WIFI_Connected(void) {
+bool wifi_connected(void) {
     return true;
 }

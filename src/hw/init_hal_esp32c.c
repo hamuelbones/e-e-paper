@@ -23,7 +23,7 @@
 
 #define BUTTON (GPIO_NUM_10)
 
-void HAL_Init(void) {
+void app_hal_init(void) {
 
     /* Print chip information */
     esp_chip_info_t chip_info;
@@ -105,16 +105,6 @@ void HAL_Init(void) {
 
 }
 
-void HAL_Print(const char *format, ...) {
-
-    va_list args;
-    va_start(args, format);
-
-    vprintf(format, args);
-
-    va_end(args);
-}
-
-void HAL_Reboot(void) {
+void app_hal_reboot(void) {
     esp_restart();
 }

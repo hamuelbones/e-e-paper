@@ -33,7 +33,7 @@ bool cryptography_rsa_exists(const char* private_filename,
                              const char* uuid_filename) {
     struct stat s;
     // TODO do proper validation and backup/restore
-    if (0 == FS_Stat(private_filename, &s) && 0 == FS_Stat(public_filename, &s)) {
+    if (0 == fs_stat(private_filename, &s) && 0 == fs_stat(public_filename, &s)) {
         return true;
     }
     return false;
@@ -45,8 +45,8 @@ bool cryptography_rsa_generate(const char *private_filename,
                                const char *uuid_filename) {
 
 
-    FS_Remove(uuid_filename);
-    void* f = FS_Open(uuid_filename, "wb");
+    fs_remove(uuid_filename);
+    void* f = fs_open(uuid_filename, "wb");
 
     if (!f) {
         return false;
@@ -59,8 +59,8 @@ bool cryptography_rsa_generate(const char *private_filename,
     RAND_bytes(bytes, 16);
     int len = snprintf(uuid, 100, "uuid = \"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\"\n",
                        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
-    FS_Write(f, uuid, len);
-    FS_Close(f);
+    fs_write(f, uuid, len);
+    fs_close(f);
 
     EVP_PKEY *key = EVP_RSA_gen(2048);
 
@@ -75,27 +75,27 @@ bool cryptography_rsa_generate(const char *private_filename,
     BIO_get_mem_ptr(private_out, &private_buf);
 
 
-    FS_Remove(private_filename);
-    f = FS_Open(private_filename, "wb");
+    fs_remove(private_filename);
+    f = fs_open(private_filename, "wb");
     if (!f) {
         BIO_free(private_out);
         BIO_free(public_out);
         EVP_PKEY_free(key);
         return false;
     }
-    FS_Write(f, private_buf->data, (int) private_buf->length);
-    FS_Close(f);
+    fs_write(f, private_buf->data, (int) private_buf->length);
+    fs_close(f);
 
-    FS_Remove(public_filename);
-    f = FS_Open(public_filename, "wb");
+    fs_remove(public_filename);
+    f = fs_open(public_filename, "wb");
     if (!f) {
-        FS_Remove(private_filename);
+        fs_remove(private_filename);
         BIO_free(private_out);
         BIO_free(public_out);
         EVP_PKEY_free(key);
         return false;
     }
-    FS_Write(f, public_buf->data, (int) public_buf->length);
+    fs_write(f, public_buf->data, (int) public_buf->length);
 
     BIO_free(private_out);
     BIO_free(public_out);
@@ -142,12 +142,12 @@ bool cryptography_sign_rsa(const char* private_filename,
         return false;
     }
 
-    void* f = FS_Open(private_filename, "r");
+    void* f = fs_open(private_filename, "r");
     if (!f) {
         return false;
     }
-    FS_Read(f, _private_key, 2048);
-    FS_Close(f);
+    fs_read(f, _private_key, 2048);
+    fs_close(f);
 
     BIO *key_bio = BIO_new_mem_buf(_private_key, -1);
 

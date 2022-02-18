@@ -1,0 +1,6 @@
+
+mode = "standalone"
+
+[[wifi]]
+ssid = "network"
+password = "test_password"

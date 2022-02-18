@@ -41,7 +41,7 @@ static void _write_display_command(spi_device_handle_t handle, const uint8_t *cm
     gpio_set_level(GPIO_DISPLAY_DC, 0);
 }
 
-void EPAPER_Init(void) {
+void epaper_init(void) {
 
     gpio_deep_sleep_hold_en();
 
@@ -78,7 +78,7 @@ void EPAPER_Init(void) {
 
 }
 
-void EPAPER_RenderBuffer(const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
+void epaper_render_buffer(const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
 
     printf("Reset the EPD driver IC\n");
     gpio_set_level(GPIO_DISPLAY_RST, 0);

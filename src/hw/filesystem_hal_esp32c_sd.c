@@ -22,7 +22,7 @@ typedef void* file_handle;
 static const char *TAG = "example";
 
 // FS characteristics should be known by hardware.
-int FS_Mount(void) {
+int fs_mount(void) {
 
     esp_err_t ret;
 
@@ -73,34 +73,34 @@ int FS_Mount(void) {
 
     return 0;
 }
-void FS_Unmount(void) {
+void fs_unmount(void) {
     // Not implemented
 }
 
-file_handle FS_Open(const char* name, const char* mode) {
+file_handle fs_open(const char* name, const char* mode) {
     return fopen(name, mode);
 }
-int FS_Read(file_handle handle, void* buf, int len) {
+int fs_read(file_handle handle, void* buf, int len) {
     return (int) fread(buf, 1, len, handle);
 }
-int FS_Write(file_handle handle, void* buf, int len) {
+int fs_write(file_handle handle, void* buf, int len) {
     return (int) fwrite(buf, 1, len, handle);
 }
-int FS_Fseek(file_handle handle, int offset, int whence) {
+int fs_fseek(file_handle handle, int offset, int whence) {
     return fseek(handle, offset, whence);
 }
-int FS_Remove(const char* name) {
+int fs_remove(const char* name) {
     return remove(name);
 }
-int FS_Stat(const char* path, struct stat* fstat) {
+int fs_stat(const char* path, struct stat* fstat) {
     return (int) stat(path, fstat);
 }
-int FS_Close(file_handle handle) {
+int fs_close(file_handle handle) {
     return fclose(handle);
 }
-int FS_Rename(const char* old, const char* new) {
+int fs_rename(const char* old, const char* new) {
     return rename(old, new);
 }
-int FS_Feof(file_handle handle) {
+int fs_feof(file_handle handle) {
     return feof(handle);
 }

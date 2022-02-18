@@ -18,22 +18,22 @@
 
 static SSL_CTX *ssl;
 
-void WIFI_Init(void) {
+void wifi_init(void) {
 
     SSL_library_init();
     SSL_load_error_strings();
     ssl = SSL_CTX_new(TLS_client_method());
 }
 
-bool WIFI_Connect(const char* ssid, const char* password) {
+bool wifi_connect(const char* ssid, const char* password) {
     return true;
 }
 
-bool WIFI_Connected(void) {
+bool wifi_connected(void) {
     return true;
 }
 
-void WIFI_Disconnect() {
+void wifi_disconnect() {
 
 }
 
@@ -45,7 +45,7 @@ void error( char* msg )
 }
 #define NTP_TIMESTAMP_DELTA 2208988800ull
 
-uint32_t WIFI_GetNetworkTime(const char* host) {
+uint32_t wifi_get_ntp(const char* host) {
 
     // From https://github.com/lettier/ntpclient/blob/master/source/c/main.c
     int sockfd, n; // Socket file descriptor and the n return result from writing/reading from the socket.
@@ -170,7 +170,7 @@ uint32_t WIFI_GetNetworkTime(const char* host) {
 
     time_t txTm = ( time_t ) ( packet.txTm_s - NTP_TIMESTAMP_DELTA );
 
-    printf("Unix time: %u\n", txTm);
+    printf("Unix time: %ld\n", txTm);
 
     return (uint32_t) txTm;
 }
@@ -182,7 +182,7 @@ typedef enum {
 } HTTP_PARSE_STATE;
 
 
-bool WIFI_HttpGet(const char* host,
+bool wifi_http_get(const char* host,
                   const char* subdirectory,
                   const char** headers,
                   size_t header_count,
@@ -286,30 +286,30 @@ bool WIFI_HttpGet(const char* host,
                     if (c == '\n') {
                         state = PARSE_HEADERS;
                         if (headers_filename) {
-                            FS_Remove(headers_filename);
-                            header_file = FS_Open(headers_filename, "wb");
+                            fs_remove(headers_filename);
+                            header_file = fs_open(headers_filename, "wb");
                         }
                     }
                     break;
                 case PARSE_HEADERS:
                     if (header_file) {
-                        FS_Write(header_file, &c, 1);
+                        fs_write(header_file, &c, 1);
                     }
                     if (c == '\n' && line_len <= 2) {
                         state = PARSE_RESPONSE;
                         if (header_file) {
-                            FS_Close(header_file);
+                            fs_close(header_file);
                         }
                         if (response_filename) {
-                            FS_Remove(response_filename);
-                            response_file = FS_Open(response_filename, "wb");
+                            fs_remove(response_filename);
+                            response_file = fs_open(response_filename, "wb");
                         }
                     }
 
                     break;
                 case PARSE_RESPONSE:
                     if (response_file) {
-                        FS_Write(response_file, &c, 1);
+                        fs_write(response_file, &c, 1);
                     }
                     break;
             }
@@ -320,7 +320,7 @@ bool WIFI_HttpGet(const char* host,
         }
     }
     if (response_file) {
-        FS_Close(response_file);
+        fs_close(response_file);
     }
 
     BIO_free_all(bio);

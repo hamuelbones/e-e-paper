@@ -28,7 +28,7 @@ bool cryptography_rsa_exists(const char* private_filename,
                              const char* uuid_filename) {
     struct stat s;
     // TODO do proper validation and backup/restore
-    if (0 == FS_Stat(private_filename, &s) && 0 == FS_Stat(public_filename, &s)) {
+    if (0 == fs_stat(private_filename, &s) && 0 == fs_stat(public_filename, &s)) {
         return true;
     }
     return false;
@@ -40,8 +40,8 @@ bool cryptography_rsa_generate(const char *private_filename,
                                const char *uuid_filename) {
 
     printf("%s\n", uuid_filename);
-    FS_Remove(uuid_filename);
-    file_handle f = FS_Open(uuid_filename, "wb");
+    fs_remove(uuid_filename);
+    file_handle f = fs_open(uuid_filename, "wb");
     if (!f) {
         printf("Failed to open key UUID file\n");
         return false;
@@ -54,8 +54,8 @@ bool cryptography_rsa_generate(const char *private_filename,
     char uuid[100];
     int len = snprintf(uuid, 100, "uuid = \"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\"\n",
                        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
-    FS_Write(f, uuid, len);
-    FS_Close(f);
+    fs_write(f, uuid, len);
+    fs_close(f);
 
     mbedtls_pk_context pk_ctx = {0};
     mbedtls_pk_init(&pk_ctx);
@@ -80,8 +80,8 @@ bool cryptography_rsa_generate(const char *private_filename,
 
     unsigned char *key_data = pvPortMalloc(5000);
 
-    FS_Remove(private_filename);
-    f = FS_Open(private_filename, "wb");
+    fs_remove(private_filename);
+    f = fs_open(private_filename, "wb");
     if (!f) {
         printf("Failed to open private key file\n");
         mbedtls_pk_free(&pk_ctx);
@@ -92,18 +92,18 @@ bool cryptography_rsa_generate(const char *private_filename,
     result = mbedtls_pk_write_key_pem(&pk_ctx, key_data, 5000);
     if (result != 0) {
         printf("Error exporting private key\n");
-        FS_Close(f);
+        fs_close(f);
         mbedtls_pk_free(&pk_ctx);
         vPortFree(key_data);
         return false;
     }
 
     // TODO check file write errors;
-    FS_Write(f, key_data, (int)strlen((char*)key_data));
-    FS_Close(f);
+    fs_write(f, key_data, (int)strlen((char*)key_data));
+    fs_close(f);
 
-    FS_Remove(public_filename);
-    f = FS_Open(public_filename, "wb");
+    fs_remove(public_filename);
+    f = fs_open(public_filename, "wb");
     if (!f) {
         printf("Failed to open public key file\n");
         mbedtls_pk_free(&pk_ctx);
@@ -114,14 +114,14 @@ bool cryptography_rsa_generate(const char *private_filename,
     result = mbedtls_pk_write_pubkey_pem(&pk_ctx, key_data, 5000);
     if (result != 0) {
         printf("Error exporting public key\n");
-        FS_Close(f);
+        fs_close(f);
         mbedtls_pk_free(&pk_ctx);
         vPortFree(key_data);
         return false;
     }
 
-    FS_Write(f, key_data, (int)strlen((char*)key_data));
-    FS_Close(f);
+    fs_write(f, key_data, (int)strlen((char*)key_data));
+    fs_close(f);
 
     vPortFree(key_data);
     mbedtls_pk_free(&pk_ctx);
@@ -159,7 +159,7 @@ bool cryptography_sign_rsa(const char* private_filename,
     //mbedtls_pk_setup( &pk_ctx, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
 
     struct stat fstat;
-    int error = FS_Stat(private_filename, &fstat);
+    int error = fs_stat(private_filename, &fstat);
 
     if (error) {
         printf("No PEM file for signing!\n");

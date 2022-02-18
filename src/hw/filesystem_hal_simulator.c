@@ -3,57 +3,71 @@
 //
 
 #include <filesystem_hal.h>
+#include <stdlib.h>
 
 // TODO make this relative or configurable
-const char* filesystem_base = "/Users/ham/src/e-e-paper/src/hw/simulator_filesystem/";
+const char* filesystem_base_default = "./";
 
 static void _full_path(const char* name, char* fullName, int len) {
+
+    const char* filesystem_base = getenv("SIMULATOR_FS_BASE");
+    if (!filesystem_base) {
+        filesystem_base = filesystem_base_default;
+    }
+
     snprintf(fullName, len, "%s%s", filesystem_base, name);
 }
 
-int FS_Mount(void) {
+int fs_mount(void) {
+
+    char fullPath[200];
+    _full_path(INTERNAL_MOUNT_POINT, fullPath, 200);
+    mkdir(fullPath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    _full_path( SD_MOUNT_POINT, fullPath, 200);
+    mkdir(fullPath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
     return 0;
 }
 
-void FS_Unmount(void) {
+void fs_unmount(void) {
 
 }
 
-file_handle FS_Open(const char* name, const char* mode) {
+file_handle fs_open(const char* name, const char* mode) {
     char fullName[200];
     _full_path(name, fullName, 200);
     return fopen(fullName, mode);
 }
 
-int FS_Read(file_handle handle, void* buf, int len) {
+int fs_read(file_handle handle, void* buf, int len) {
     return (int) fread(buf, 1, len, handle);
 }
 
-int FS_Write(file_handle handle, void* buf, int len) {
+int fs_write(file_handle handle, void* buf, int len) {
     return (int) fwrite(buf, 1, len, handle);
 }
 
-int FS_Fseek(file_handle handle, int offset, int whence) {
+int fs_fseek(file_handle handle, int offset, int whence) {
     return (int) fseek(handle, offset, whence);
 }
 
-int FS_Remove(const char* name) {
+int fs_remove(const char* name) {
     char fullName[200];
     _full_path(name, fullName, 200);
     return (int) remove(fullName);
 }
 
-int FS_Stat(const char* name, struct stat* fstat) {
+int fs_stat(const char* name, struct stat* fstat) {
     char fullName[200];
     _full_path(name, fullName, 200);
     return (int) stat(fullName, fstat);
 }
 
-int FS_Close(file_handle handle) {
+int fs_close(file_handle handle) {
     return fclose((FILE*)handle);
 }
 
-int FS_Rename(const char* old, const char* new) {
+int fs_rename(const char* old, const char* new) {
     char fullOldName[200];
     _full_path(old, fullOldName, 200);
     char fullNewName[200];
@@ -61,16 +75,16 @@ int FS_Rename(const char* old, const char* new) {
     return rename(fullOldName, fullNewName);
 }
 
-int FS_NumFiles(void) {
+int fs_NumFiles(void) {
     printf("Not Implemented!");
     return -1;
 }
 
-int FS_NthFile(int n) {
+int fs_NthFile(int n) {
     printf("Not Implemented!");
     return -1;
 }
 
-int FS_Feof(file_handle handle) {
+int fs_feof(file_handle handle) {
     return feof(handle);
 }

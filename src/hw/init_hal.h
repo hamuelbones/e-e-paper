@@ -5,10 +5,8 @@
 #ifndef EPAPER_DISPLAY_INIT_HAL_H
 #define EPAPER_DISPLAY_INIT_HAL_H
 
-void HAL_Init(void);
+void app_hal_init(void);
 
-void HAL_Print(const char *format, ...);
-
-void HAL_Reboot(void);
+void app_hal_reboot(void);
 
 #endif //EPAPER_DISPLAY_INIT_HAL_H
