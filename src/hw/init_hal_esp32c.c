@@ -8,6 +8,7 @@
 #include "esp_pm.h"
 
 #include "nvs_flash.h"
+#include "nvs.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
@@ -96,6 +97,46 @@ void app_hal_init(void) {
 
     ret = spi_bus_initialize(SPI2_HOST, &busConfig, SPI_DMA_CH_AUTO);
     ESP_ERROR_CHECK(ret);
+
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+
+    nvs_handle_t my_handle;
+    err = nvs_open("storage", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        // Read
+        int32_t restart_counter = 0; // value will default to 0, if not set yet in NVS
+        err = nvs_get_i32(my_handle, "restart_counter", &restart_counter);
+        switch (err) {
+            case ESP_OK:
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                printf("The value is not initialized yet!\n");
+                break;
+            default :
+                printf("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+
+        // Write
+        restart_counter++;
+        printf("Restart counter = %d\n", restart_counter);
+        nvs_set_i32(my_handle, "restart_counter", restart_counter);
+
+        printf("Committing updates in NVS ... ");
+        nvs_commit(my_handle);
+
+        // Close
+        nvs_close(my_handle);
+    }
 
     esp_pm_config_esp32c3_t power_config;
     power_config.light_sleep_enable = true;
