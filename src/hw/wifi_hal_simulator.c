@@ -196,12 +196,31 @@ bool wifi_http_get(const char* host,
     BIO_get_ssl(bio, &thisSSL);
     SSL_set_mode(thisSSL, SSL_MODE_AUTO_RETRY);
 
-    BIO_set_conn_hostname(bio, host);
+    bool has_port = false;
+    if (strchr(host, ':')) {
+        has_port = true;
+    }
+
+    bool use_ssl = true;
+    char * host_and_port;
+    if (has_port) {
+        host_and_port = strdup(host);
+    } else {
+        size_t len = strlen(host) + 10;
+        host_and_port = malloc(len);
+        snprintf(host_and_port, len, "%s:%d", host, use_ssl ? 443 : 80);
+    }
+
+    BIO_set_conn_hostname(bio, host_and_port);
+    char* port_loc = strrchr(host_and_port, ':');
+    *port_loc = '\0';
+    SSL_set_tlsext_host_name(thisSSL, host_and_port);
 
     int result = 0;
     do {
         result = BIO_do_connect(bio);
     } while (result <= 0 && BIO_should_retry(bio));
+    free(host_and_port);
 
     if (result <= 0) {
         printf("Failed connection %d\n", result);
