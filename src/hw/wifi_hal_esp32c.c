@@ -29,7 +29,7 @@ typedef enum {
 } ESP_WIFI_BITS;
 
 static void start_timeout_timer(uint32_t ms) {
-    xTimerChangePeriod(_timeout_timer, ms/portTICK_RATE_MS, portMAX_DELAY);
+    xTimerChangePeriod(_timeout_timer, ms/portTICK_PERIOD_MS, portMAX_DELAY);
     xTimerStart(_timeout_timer, portMAX_DELAY);
 }
 

@@ -6,6 +6,6 @@ else()
     idf_component_register(
             SRCS "clock_app.c"
             INCLUDE_DIRS "." "../"
-            REQUIRES hw display tomlc99 font utils
+            REQUIRES hw display tomlc99 font utils resources
     )
 endif()

@@ -8,7 +8,7 @@
 #include "resources.h"
 #include "filesystem_hal.h"
 
-#include "FreeRTOS.h"
+#include "freertos/FreeRTOS.h"
 #include <string.h>
 
 typedef struct {

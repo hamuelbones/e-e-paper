@@ -82,8 +82,8 @@ static const APP_INTERFACE *_apps[NUMBER_OF_APPS] = {
 };
 
 static void* _currentAppContext = NULL;
-static xTimerHandle _currentAppTimer = NULL;
-static xTimerHandle _refreshTimer = NULL;
+static TimerHandle_t _currentAppTimer = NULL;
+static TimerHandle_t _refreshTimer = NULL;
 static bool standalone = false;
 
 static char jwt_header[600];

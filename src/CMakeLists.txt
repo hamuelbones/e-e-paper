@@ -33,6 +33,6 @@ else()
     idf_component_register(
             SRCS "epaper_display_main.c" "wifi_task.c"
             INCLUDE_DIRS "." "apps/"
-            REQUIRES font display hw tomlc99 message_box utils
+            REQUIRES font display hw tomlc99 message_box utils freertos
     )
 endif()
