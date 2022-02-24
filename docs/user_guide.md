@@ -31,7 +31,7 @@ Actually, it might be better to find some ways to shorten this a bit.
 
 # File Overview
 
-## `startup.toml`
+## Boot Configuration - `startup.toml`
 
 A file named `startup.toml` is used to configure the module's boot-time behavior. As such, it needs to be loaded
 from an SD card - it is loaded and used before the module potentially connects to the internet.
@@ -92,9 +92,22 @@ If the request does not complete or the server responds with an error, the modul
 
 The `server` table has no effect if the module's mode is `"standalone"` or `"static"`.
 
-## `config.toml`
+## App Configuration - `config.toml`
 
-# Connecting to a server
+A file named `config.toml` is used to configure the application, or what the display actually shows, in addition to
+specifying the layout and location of other resources that are needed.
+
+### Example
+
+Here's a sample ``
+
+### Description
+
+#### Application
+
+#### Resources
+
+#### Display (`render_root`)
 
 ## Authorization
 
@@ -109,12 +122,6 @@ file named `public.pem`. This file may be uploaded to the server application, or
 otherwise used to verify the signature provided in those HTTP requests.
 
 The corresponding private key is saved onboard the device.
-
-# Application configuration
-
-## Display / Layout
-
-The `config.toml` file contains the complete description of what to 
 
 ### Included fonts
 

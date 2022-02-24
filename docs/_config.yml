@@ -1,3 +1,4 @@
-theme: jekyll-theme-minimal
+remote_theme: pmarsceill/just-the-docs
+theme: just-the-docs
 title: "e-e-Paper Display Module"
 description: "User guide and documentation"
