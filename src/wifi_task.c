@@ -4,8 +4,10 @@
 
 #include "wifi_task.h"
 #include "wifi_hal.h"
-#include "toml_resources.h"
+#include "resources.h"
+#include "toml.h"
 #include "freertos/message_buffer.h"
+#include <stdio.h>
 
 #define WIFI_MESSAGE_BUFFER_SIZE 200
 #define WIFI_MESSAGE_MAX_SIZE 50
@@ -30,7 +32,7 @@ void _Noreturn wifi_task(void* params) {
 
         switch (request.type) {
             case WIFI_CONNECT: {
-                toml_table_t *startup = toml_resource_get("startup");
+                toml_table_t *startup = resource_get("startup");
                 toml_array_t* wifi_credentials = toml_array_in(startup, "wifi");
                 int num_wifi_aps = toml_array_nelem(wifi_credentials);
                 bool succeeded = false;

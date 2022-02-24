@@ -12,8 +12,7 @@
 #include "display_draw_image.h"
 #include "display_draw_geometry.h"
 #include "display_draw_text.h"
-#include "toml_resources.h"
-#include "font_resources.h"
+#include "resources.h"
 
 #include <string.h>
 
@@ -113,7 +112,7 @@ void* message_box_init(toml_table_t *startup_config, toml_table_t * device_confi
 
     context->startup_config = startup_config;
     context->app_config = device_config;
-    context->messages = toml_resource_get("messages");
+    context->messages = resource_get("messages");
     context->selected_message = -1;
 
     return context;
@@ -167,7 +166,7 @@ void draw_texts(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
         if (font.ok) {
             font_table = font_get_table_for_name(font.u.s);
             if (!font_table) {
-                font_table = font_resource_get(font.u.s);
+                font_table = resource_get(font.u.s);
             }
             if (font_table == NULL) {
                 printf("Couldn't find font: %s", font.u.s);
@@ -262,7 +261,7 @@ void draw_symbols(MESSAGE_BOX_CONTEXT *ctx, toml_table_t *box, DISPLAY_COORD off
         if (font.ok) {
             font_to_use = font_get_table_for_name(font.u.s);
             if (!font_to_use) {
-                font_to_use = font_resource_get(font.u.s);
+                font_to_use = resource_get(font.u.s);
             }
             if (font_to_use == NULL) {
                 printf("Couldn't find font: %s", font.u.s);

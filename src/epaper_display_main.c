@@ -19,8 +19,7 @@
 #include "toml.h"
 #include "cryptography_hal.h"
 #include "file_utils.h"
-#include "toml_resources.h"
-#include "font_resources.h"
+#include "resources.h"
 #include "cryptography_hal.h"
 #include "jwt.h"
 #include "epaper_display_main.h"
@@ -172,7 +171,7 @@ static bool _refresh_resource(int num) {
 
     printf("Attempting to get resource %u\n", num);
 
-    toml_array_t* resources = toml_array_in(toml_resource_get("config"), "resource");
+    toml_array_t* resources = toml_array_in(resource_get("config"), "resource");
     if (num >= toml_array_nelem(resources)) {
         printf("no more resources\n");
         return false;
@@ -213,14 +212,14 @@ static int _load_startup_file(void) {
         return MAIN_STATE_INIT_ERROR;
     }
 
-    if (!toml_resource_load(INTERNAL_MOUNT_POINT STARTUP_FILENAME, "startup")) {
+    if (!resource_load(INTERNAL_MOUNT_POINT STARTUP_FILENAME, "startup", RESOURCE_TOML)) {
         printf("Failed to load startup TOML\n");
         char message = MAIN_MESSAGE_REBOOT;
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
         return MAIN_STATE_INIT_ERROR;
     }
 
-    toml_table_t *startup_config = toml_resource_get("startup");
+    toml_table_t *startup_config = resource_get("startup");
     if (!startup_config) {
         printf("Failed to load startup TOML from resource list\n");
         char message = MAIN_MESSAGE_REBOOT;
@@ -264,8 +263,8 @@ static int _load_startup_file(void) {
 
 static int _load_config_file(void) {
 
-    toml_resource_load(INTERNAL_MOUNT_POINT APP_CONFIG_FILENAME, "config");
-    toml_table_t *device_config = toml_resource_get("config");
+    resource_load(INTERNAL_MOUNT_POINT APP_CONFIG_FILENAME, "config", RESOURCE_TOML);
+    toml_table_t *device_config = resource_get("config");
     if (!device_config) {
         printf("Toml config file load error\n");
         char message = MAIN_MESSAGE_REBOOT;
@@ -350,7 +349,7 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
 
             jwt_destroy(jwt);
 
-            toml_table_t *startup = toml_resource_get("startup");
+            toml_table_t *startup = resource_get("startup");
             toml_table_t *server = toml_table_in(startup, "server");
             if (!server) {
                 printf("No server configuration found.\n");
@@ -381,7 +380,7 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
                 request.type = WIFI_DISCONNECT;
                 xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
             }
-            toml_resource_unload_all();
+            resource_unload_all();
             return _load_startup_file();
     }
     return -1;
@@ -425,7 +424,7 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
                 status = message[1] | (message[2] << 8);
             }
 
-            toml_array_t* resources = toml_array_in(toml_resource_get("config"), "resource");
+            toml_array_t* resources = toml_array_in(resource_get("config"), "resource");
             toml_table_t* resource_info = toml_table_at(resources, (int)current_resource_fetch_id);
             toml_datum_t name = toml_string_in(resource_info, "local_filename");;
             toml_datum_t resource_name = toml_string_in(resource_info, "name");
@@ -462,9 +461,9 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
             char * extension = strrchr(to, '.');
             if (extension) {
                 if (strcmp(extension, ".toml") == 0) {
-                    toml_resource_load(to, resource_name.u.s);
+                    resource_load(to, resource_name.u.s, RESOURCE_TOML);
                 } else if (strcmp(extension, ".fbin") == 0) {
-                    font_resource_load(to, resource_name.u.s);
+                    resource_load(to, resource_name.u.s, RESOURCE_FONT);
                 }
             }
 
@@ -490,11 +489,11 @@ static int _state_run_app(uint8_t *message, size_t len) {
     switch(message[0]) {
         case MAIN_MESSAGE_APP_INIT: {
             current_app = NULL;
-            toml_table_t *device_config = toml_resource_get("config");
+            toml_table_t *device_config = resource_get("config");
             toml_table_t *app_info = toml_table_in(device_config, "application");
             toml_datum_t app_name = toml_string_in(app_info, "name");
 
-            toml_table_t *startup_config = toml_resource_get("startup");
+            toml_table_t *startup_config = resource_get("startup");
 
             // Done with WiFi!
             WIFI_REQUEST request = {};
@@ -535,8 +534,7 @@ static int _state_run_app(uint8_t *message, size_t len) {
                 current_app->app_deinit(_currentAppContext);
                 xTimerStop(_currentAppTimer, portMAX_DELAY);
             }
-            font_resource_unload_all();
-            toml_resource_unload_all();
+            resource_unload_all();
             return _load_startup_file();
         }
         default:
