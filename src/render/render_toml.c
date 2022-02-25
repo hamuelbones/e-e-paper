@@ -10,7 +10,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-#define INVALID_SIZE (100000)
+#define INVALID_SIZE (20000)
 
 typedef struct {
     uint16_t top;
@@ -82,14 +82,14 @@ static int parse_dimension_string(toml_table_t *item, const char *key, int max_s
         bool ends_in_percent_sign = false;
         bool ends_in_px = false;
         bool first_char = true;
-        const char * iterable_key = key;
-        while (*iterable_key) {
-            if (!isdigit((int)*iterable_key) &&
-                !(first_char && (*iterable_key == '-' || *iterable_key == '+'))) {
+        const char * iterable_item = base.u.s;
+        while (*iterable_item) {
+            if (!isdigit((int)*iterable_item) &&
+                !(first_char && (*iterable_item == '-' || *iterable_item == '+'))) {
                 all_digit = false;
-                if (*iterable_key == '%') {
+                if (*iterable_item == '%') {
                     ends_in_percent_sign = true;
-                } else if (!first_char && (*(iterable_key-1) == 'p') && (*iterable_key == 'x')) {
+                } else if (!first_char && (*(iterable_item-1) == 'p') && (*iterable_item == 'x')) {
                     ends_in_px  = true;
                 } else {
                     ends_in_percent_sign = false;
@@ -99,23 +99,25 @@ static int parse_dimension_string(toml_table_t *item, const char *key, int max_s
                 ends_in_percent_sign = false;
                 ends_in_px = false;
             }
-            iterable_key++;
+            iterable_item++;
             first_char = false;
         }
 
+        int result = INVALID_SIZE;
         if (all_digit) {
             // Just a number (X)
-            return strtol(key, NULL, 10);
+            result = strtol(base.u.s, NULL, 10);
         } else if (ends_in_px) {
             // A number, with px at the end
-            return strtol(key, NULL, 10);
+            result = strtol(base.u.s, NULL, 10);
         } else if (ends_in_percent_sign) {
             // XX% or XX.X percent, potentially floating point
-            double percentage = strtod(key, NULL);
-            return (int)((percentage * max_size) / 100.0f);
+            double percentage = strtod(base.u.s, NULL);
+            result = (int)((percentage * max_size) / 100.0f);
         }
-
         vPortFree(base.u.s);
+        return result;
+
     }
 
     return INVALID_SIZE;
@@ -266,6 +268,9 @@ static void render_rect(toml_table_t *rect,
                         POSITION horizontal_justify, POSITION vertical_justify,
                         DISPLAY_COORD *sub_item_offset, DISPLAY_COORD *sub_item_size) {
 
+    // Rect positioning is entirely done by position / margins, justification is unused.
+
+    printf("rect at %u %u, size %u %u\n", offset.x, offset.y, size.x, size.y);
     toml_datum_t thickness = toml_int_in(rect, "thickness");
     toml_datum_t fill = toml_bool_in(rect, "filled");
     toml_datum_t notched = toml_bool_in(rect, "notched");
@@ -280,21 +285,22 @@ static void render_rect(toml_table_t *rect,
     }
 
     DISPLAY_COORD bottom_right = {
-        .x = offset.x + size.x,
-        .y = offset.y + size.y,
+        .x = offset.x + size.x - 1,
+        .y = offset.y + size.y - 1,
     };
 
-    dispbuf_draw_rect(offset, bottom_right, (int)thickness.u.i, fill.u.b, notched.u.b);
+    dispbuf_draw_rect_line(offset, bottom_right, (int)thickness.u.i, fill.u.b, notched.u.b);
 
+    // Sub-area is the inset area of the rectangle
     sub_item_offset->x = offset.x + thickness.u.i;
     sub_item_offset->y = offset.y + thickness.u.i;
-    if (sub_item_size->x >= thickness.u.i) {
-        sub_item_size->x -= thickness.u.i;
+    if (sub_item_size->x >= 2*thickness.u.i) {
+        sub_item_size->x -= 2*thickness.u.i;
     } else {
         sub_item_size->x = 0;
     }
-    if (sub_item_size->y >= thickness.u.i) {
-        sub_item_size->y -= thickness.u.i;
+    if (sub_item_size->y >= 2*thickness.u.i) {
+        sub_item_size->y -= 2*thickness.u.i;
     } else {
         sub_item_size->y = 0;
     }
@@ -305,11 +311,15 @@ static void render_symbol(toml_table_t *symbol,
                           POSITION horizontal_justify, POSITION vertical_justify,
                           DISPLAY_COORD *sub_item_offset, DISPLAY_COORD *sub_item_size) {
 
+    // Sub-item size is where the character was actually drawn on-screen
+
 }
 static void render_text(toml_table_t *text,
                         DISPLAY_COORD offset, DISPLAY_COORD size,
                         POSITION horizontal_justify, POSITION vertical_justify,
                         DISPLAY_COORD *sub_item_offset, DISPLAY_COORD *sub_item_size) {
+
+    // Sub-item size is are the dimensions of screen area that were touched by screen rendering
 
 }
 static void render_line(toml_table_t *line,
@@ -317,7 +327,36 @@ static void render_line(toml_table_t *line,
                         POSITION horizontal_justify, POSITION vertical_justify,
                         DISPLAY_COORD *sub_item_offset, DISPLAY_COORD *sub_item_size) {
 
+    DISPLAY_COORD p0 = {0, 0};
+    DISPLAY_COORD p1 = {0, 0};
 
+    p0.x = parse_dimension_string(line, "x0", size.x);
+    p0.y = parse_dimension_string(line, "y0", size.y);
+    p1.x = parse_dimension_string(line, "x1", size.x);
+    p1.y = parse_dimension_string(line, "y1", size.y);
+
+    if (p0.x == INVALID_SIZE) {
+        p0.x = 0;
+    }
+    if (p0.y == INVALID_SIZE) {
+        p0.y = 0;
+    }
+    if (p1.x == INVALID_SIZE) {
+        p1.x = 0;
+    }
+    if (p1.y == INVALID_SIZE) {
+        p1.y = 0;
+    }
+
+    toml_datum_t thickness = toml_int_in(line, "thickness");
+    if (!thickness.ok) {
+        thickness.u.i = 1;
+    }
+    dispbuf_draw_line(p0, p1, thickness.u.i);
+
+    // Sub-item size is X/Y line boundaries
+    *sub_item_offset = offset;
+    *sub_item_offset = size;
 }
 
 void (*item_draw_functions[RENDER_TYPE_MAX])(toml_table_t *rect, DISPLAY_COORD offset, DISPLAY_COORD size,
@@ -341,6 +380,14 @@ void render_item(toml_table_t *item, DISPLAY_COORD offset, DISPLAY_COORD dims, R
 
     COMMON_RENDER_PROPERTIES properties;
     get_render_properties(&properties, item, dims);
+    printf("render object (%d): offset %d %d, size %d %d\n", type, offset.x, offset.y, dims.x, dims.y);
+    printf("render props: \n"
+           " m- t:%d b:%d l:%d r:%d \n p- t:%d b:%d l:%d r:%d \n h:%d w:%d \n pos: h:%d v%d jus: h:%d v:%d\n",
+           properties.margin.top, properties.margin.bottom, properties.margin.left, properties.margin.right,
+           properties.padding.top, properties.padding.bottom, properties.padding.left, properties.padding.right,
+           properties.height, properties.width,
+           properties.horizontal_position, properties.horizontal_justification,
+           properties.vertical_position, properties.vertical_justification);
 
     // Can apply margin from now on
     offset.x += properties.margin.left;
@@ -424,7 +471,7 @@ void render_item(toml_table_t *item, DISPLAY_COORD offset, DISPLAY_COORD dims, R
         toml_array_t* arr = toml_array_in(item, render_object_names[i]);
         if (arr) {
             for (int j=0; j<toml_array_nelem(arr); j++) {
-                render_item(toml_table_at(arr, j), sub_item_dims, sub_item_offset, i);
+                render_item(toml_table_at(arr, j), sub_item_offset, sub_item_dims, i);
             }
         }
     }

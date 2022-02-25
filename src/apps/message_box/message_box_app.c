@@ -372,7 +372,7 @@ void draw_rects(MESSAGE_BOX_CONTEXT *ctx, toml_table_t* box, DISPLAY_COORD offse
             .x = rect_offset.x + width.u.i - 1,
             .y = rect_offset.y + height.u.i - 1
         };
-        dispbuf_draw_rect(rect_offset, bottom_right, thickness.u.i, fill.u.b, notched.u.b);
+        dispbuf_draw_rect_line(rect_offset, bottom_right, thickness.u.i, fill.u.b, notched.u.b);
     }
 }
 
