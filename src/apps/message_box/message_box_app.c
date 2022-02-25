@@ -14,6 +14,8 @@
 #include "display_draw_text.h"
 #include "resources.h"
 
+#include "render_toml.h"
+
 #include <string.h>
 
 typedef struct {
@@ -398,10 +400,11 @@ void message_box_process(void* context, uint8_t *message, size_t length) {
     dispbuf_swap();
     dispbuf_clear_active();
 
-    toml_table_t *drawing_root = toml_table_in(appCtx->app_config, "render_root");
+    toml_table_t *drawing_root = toml_table_in(appCtx->app_config, "render");
     DISPLAY_COORD offset = {0, 0};
     DISPLAY_COORD dims = {DISPLAY_WIDTH, DISPLAY_HEIGHT};
-    draw_section(appCtx, drawing_root, offset, dims);
+    render_toml(drawing_root, dims);
+    //draw_section(appCtx, drawing_root, offset, dims);
 
     epaper_render_buffer(dispbuf_active_buffer(), dispbuf_inactive_buffer(), BUFFER_SIZE);
 }

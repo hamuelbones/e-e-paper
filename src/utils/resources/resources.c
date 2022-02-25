@@ -48,6 +48,7 @@ bool resource_load(const char* file_name, const char *resource_name, RESOURCE_TY
     strcpy(new_resource->name, resource_name);
     new_resource->data = loaded_resource;
     new_resource->type = type;
+    resources.count++;
 
     return true;
 }

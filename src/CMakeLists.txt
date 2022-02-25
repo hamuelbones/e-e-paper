@@ -28,6 +28,7 @@ if(SIMULATOR)
     add_subdirectory(font)
     add_subdirectory(hw)
     add_subdirectory(lib)
+    add_subdirectory(render)
     add_subdirectory(utils)
 else()
     idf_component_register(
