@@ -48,7 +48,7 @@ int dispbuf_draw_label(DISPLAY_COORD cursor, const char*s, const FONT_TABLE* fon
     return cur_offset;
 }
 
-int dispbuf_draw_labelWithSize(DISPLAY_COORD cursor,
+int dispbuf_draw_label_with_string_size(DISPLAY_COORD cursor,
                              const char*s, size_t len,
                              const FONT_TABLE* font,
                              DRAW_FLAGS flags) {
@@ -76,7 +76,7 @@ int DISPBUF_DrawWord(DISPLAY_COORD cursor,
     return cur_offset;
 }
 
-int dispbuf_draw_text(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* font,
+DISPLAY_COORD dispbuf_draw_text(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* font,
                           uint16_t max_x, uint16_t max_y, DRAW_FLAGS flags) {
 
     // TODO: need to reduce complexity and potentially break down this function.
@@ -85,8 +85,7 @@ int dispbuf_draw_text(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* fon
     // Recursive solution is hacky here...
     if (flags & (DRAW_JUSTIFY_VERT_CENTER | DRAW_JUSTIFY_VERT_BOTTOM)) {
         DRAW_FLAGS measure_flags = (flags & ~(DRAW_JUSTIFY_VERT_CENTER | DRAW_JUSTIFY_VERT_BOTTOM)) | DRAW_MEASURE;
-        int y_size = DISPBUF_FontHeight(font) *
-                     dispbuf_draw_text(cursor, s, font, max_x, max_y, measure_flags);
+        int y_size = dispbuf_draw_text(cursor, s, font, max_x, max_y, measure_flags).y;
 
         if (flags & DRAW_JUSTIFY_VERT_CENTER) {
             y_offset = (max_y-y_size)/2;
@@ -96,6 +95,8 @@ int dispbuf_draw_text(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* fon
     }
 
     cursor.y += y_offset;
+
+    int max_width = 0;
 
     int chars_drawn = 0;
     int lines_drawn = 0;
@@ -164,7 +165,10 @@ int dispbuf_draw_text(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* fon
             current_cursor.x += (max_x - line_pix_length);
         }
 
-        dispbuf_draw_labelWithSize(current_cursor, line_draw_start, line_draw_end-line_draw_start, font, flags);
+        int width = dispbuf_draw_label_with_string_size(current_cursor, line_draw_start, line_draw_end-line_draw_start, font, flags);
+        if (max_width < width) {
+            max_width = width;
+        }
 
         chars_drawn += line_end - line_draw_start;
         lines_drawn += 1;
@@ -177,5 +181,9 @@ int dispbuf_draw_text(DISPLAY_COORD cursor, const char *s, const FONT_TABLE* fon
         max_y -= font_height;
     }
 
-    return lines_drawn;
+    DISPLAY_COORD size = {
+        .x = max_width,
+        .y = lines_drawn * DISPBUF_FontHeight(font),
+    };
+    return size;
 }

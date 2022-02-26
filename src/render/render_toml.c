@@ -5,6 +5,9 @@
 #include "render_toml.h"
 #include "freertos/FreeRTOS.h"
 #include "display_draw_geometry.h"
+#include "display_draw_text.h"
+#include "display_draw_image.h"
+#include "resources.h"
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
@@ -13,10 +16,10 @@
 #define INVALID_SIZE (20000)
 
 typedef struct {
-    uint16_t top;
-    uint16_t bottom;
-    uint16_t left;
-    uint16_t right;
+    int16_t top;
+    int16_t bottom;
+    int16_t left;
+    int16_t right;
 } BOX_BOUNDS;
 
 typedef enum {
@@ -247,7 +250,7 @@ void get_render_properties(COMMON_RENDER_PROPERTIES *p, toml_table_t *item, DISP
     parse_orientation(item, "position", &p->horizontal_position, &p->vertical_position);
 
     // Parse justification properties
-    parse_orientation(item, "justify", &p->horizontal_position, &p->vertical_position);
+    parse_orientation(item, "justify", &p->horizontal_justification, &p->vertical_justification);
 
 
     // Parse width and height
@@ -311,7 +314,62 @@ static void render_symbol(toml_table_t *symbol,
                           POSITION horizontal_justify, POSITION vertical_justify,
                           DISPLAY_COORD *sub_item_offset, DISPLAY_COORD *sub_item_size) {
 
-    // Sub-item size is where the character was actually drawn on-screen
+    toml_datum_t id = toml_int_in(symbol, "id");
+    int symbol_id = 0;
+
+    if (id.ok) {
+        symbol_id = id.u.i;
+    }
+
+    const FONT_TABLE * font_to_use = font_get_table(SYSTEM_SYMBOLS);
+
+    toml_datum_t font = toml_string_in(symbol, "font");
+    if (font.ok) {
+        font_to_use = font_get_table_for_name(font.u.s);
+        if (!font_to_use) {
+            font_to_use = resource_get(font.u.s);
+        }
+        if (font_to_use == NULL) {
+            printf("Couldn't find font: %s", font.u.s);
+            font_to_use = font_get_table(SYSTEM_SYMBOLS);
+        }
+    }
+
+
+    DRAW_FLAGS flags = 0;
+    if (horizontal_justify == CENTER) {
+        flags |= DRAW_JUSTIFY_HORIZ_CENTER;
+    } else if (horizontal_justify == RIGHT) {
+        flags |= DRAW_JUSTIFY_HORIZ_RIGHT;
+    }
+
+    if (vertical_justify == CENTER) {
+        flags |= DRAW_JUSTIFY_VERT_CENTER;
+    } else if (vertical_justify == BOTTOM) {
+        flags |= DRAW_JUSTIFY_VERT_BOTTOM;
+    }
+
+    const FONT_CHARACTER *c = font_get_bitmap(font_to_use, symbol_id);
+    if (c) {
+        DISPLAY_COORD symbol_size = {.x=c->width, .y=c->height};
+        dispbuf_draw_bitmap(offset, symbol_size, size, c->data, flags);
+
+        // Sub-item size is where the character was actually drawn on-screen
+        *sub_item_size = symbol_size;
+
+        if (horizontal_justify == CENTER) {
+            sub_item_offset->x = offset.x + (size.x - symbol_size.x)/2;
+        } else if (horizontal_justify == RIGHT) {
+            sub_item_offset->x = offset.x + (size.x - symbol_size.x);
+        }
+
+        if (vertical_justify == CENTER) {
+            sub_item_offset->y = offset.y + (size.y - symbol_size.y)/2;
+        } else if (vertical_justify == BOTTOM) {
+            sub_item_offset->y = offset.y + (size.y - symbol_size.y);
+        }
+    }
+
 
 }
 static void render_text(toml_table_t *text,
@@ -319,7 +377,59 @@ static void render_text(toml_table_t *text,
                         POSITION horizontal_justify, POSITION vertical_justify,
                         DISPLAY_COORD *sub_item_offset, DISPLAY_COORD *sub_item_size) {
 
+    toml_datum_t font = toml_string_in(text, "font");
+
+    // sensible default
+    const FONT_TABLE *font_table = font_get_table_for_name("BITTER_PRO_24");
+
+    if (font.ok) {
+        font_table = font_get_table_for_name(font.u.s);
+        if (!font_table) {
+            font_table = resource_get(font.u.s);
+        }
+        if (font_table == NULL) {
+            printf("Couldn't find font: %s", font.u.s);
+        }
+        vPortFree(font.u.s);
+    }
+
+    char *render_string = "";
+    toml_datum_t value = toml_string_in(text, "value");
+    if (value.ok) {
+        render_string = value.u.s;
+    }
+
+    DRAW_FLAGS flags = 0;
+    if (horizontal_justify == CENTER) {
+        flags |= DRAW_JUSTIFY_HORIZ_CENTER;
+    } else if (horizontal_justify == RIGHT) {
+        flags |= DRAW_JUSTIFY_HORIZ_RIGHT;
+    }
+
+    if (vertical_justify == CENTER) {
+        flags |= DRAW_JUSTIFY_VERT_CENTER;
+    } else if (vertical_justify == BOTTOM) {
+        flags |= DRAW_JUSTIFY_VERT_BOTTOM;
+    }
+
+    // TODO : Substitutions / lookup
+    printf("string: %s offset: %d %d size: %d %d flags: %02x\n", render_string, offset.x, offset.y, size.x, size.y, flags);
+    DISPLAY_COORD draw_size = dispbuf_draw_text(offset, render_string, font_table, size.x, size.y, flags);
+
     // Sub-item size is are the dimensions of screen area that were touched by screen rendering
+    *sub_item_size = draw_size;
+
+    if (horizontal_justify == CENTER) {
+        sub_item_offset->x = offset.x + (size.x - draw_size.x)/2;
+    } else if (horizontal_justify == RIGHT) {
+        sub_item_offset->x = offset.x + (size.x - draw_size.x);
+    }
+
+    if (vertical_justify == CENTER) {
+        sub_item_offset->y = offset.y + (size.y - draw_size.y)/2;
+    } else if (vertical_justify == BOTTOM) {
+        sub_item_offset->y = offset.y + (size.y - draw_size.y);
+    }
 
 }
 static void render_line(toml_table_t *line,
@@ -382,12 +492,12 @@ void render_item(toml_table_t *item, DISPLAY_COORD offset, DISPLAY_COORD dims, R
     get_render_properties(&properties, item, dims);
     printf("render object (%d): offset %d %d, size %d %d\n", type, offset.x, offset.y, dims.x, dims.y);
     printf("render props: \n"
-           " m- t:%d b:%d l:%d r:%d \n p- t:%d b:%d l:%d r:%d \n h:%d w:%d \n pos: h:%d v%d jus: h:%d v:%d\n",
+           " m- t:%d b:%d l:%d r:%d \n p- t:%d b:%d l:%d r:%d \n h:%d w:%d \n pos: h:%d v:%d jus: h:%d v:%d\n",
            properties.margin.top, properties.margin.bottom, properties.margin.left, properties.margin.right,
            properties.padding.top, properties.padding.bottom, properties.padding.left, properties.padding.right,
            properties.height, properties.width,
-           properties.horizontal_position, properties.horizontal_justification,
-           properties.vertical_position, properties.vertical_justification);
+           properties.horizontal_position, properties.vertical_position,
+           properties.horizontal_justification, properties.vertical_justification);
 
     // Can apply margin from now on
     offset.x += properties.margin.left;
@@ -430,6 +540,7 @@ void render_item(toml_table_t *item, DISPLAY_COORD offset, DISPLAY_COORD dims, R
     } else { // Assumed RIGHT
         placement.x = dims.x + offset.x - properties.width;
     }
+
     if (properties.vertical_position == TOP) {
         placement.y = offset.y;
     } else if (properties.vertical_position == CENTER) {
@@ -456,11 +567,16 @@ void render_item(toml_table_t *item, DISPLAY_COORD offset, DISPLAY_COORD dims, R
         dims.y = dims.y - properties.padding.top - properties.padding.bottom;
     }
 
+    DISPLAY_COORD size = {
+        .x = properties.width,
+        .y = properties.height
+    };
+
     // Now render and get box for sub-items!
     DISPLAY_COORD sub_item_offset = placement;
-    DISPLAY_COORD sub_item_dims = dims;
+    DISPLAY_COORD sub_item_dims = size;
     if (item_draw_functions[type]) {
-        item_draw_functions[type](item, placement, dims,
+        item_draw_functions[type](item, placement, size,
                 properties.horizontal_justification, properties.vertical_justification,
                 &sub_item_offset, &sub_item_dims);
     }

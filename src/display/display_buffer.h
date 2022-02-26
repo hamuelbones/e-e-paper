@@ -18,8 +18,8 @@ typedef enum {
 } DRAW_FLAGS;
 
 typedef struct {
-    uint16_t x;
-    uint16_t y;
+    int16_t x;
+    int16_t y;
 } DISPLAY_COORD;
 
 #define DISPLAY_WIDTH 800

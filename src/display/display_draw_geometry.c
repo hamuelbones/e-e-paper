@@ -69,8 +69,6 @@ void dispbuf_draw_line(DISPLAY_COORD p0, DISPLAY_COORD p1, uint16_t thickness) {
         return;
     }
 
-    printf("Draw line from %u, %u to %u, %u, thickness %u\n", p0.x, p0.y, p1.x, p1.y, thickness);
-
     // This is Bresenham's line drawing algorithm
     int dx = abs(p0.x - p1.x);
     int sx = p0.x < p1.x ? 1 : -1;
