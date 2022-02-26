@@ -8,5 +8,7 @@
 
 void* toml_load(const char* file_name);
 void toml_unload(void* table);
+void toml_new_frame(void* table);
+void* toml_get_element(void* table, const char *key);
 
 #endif //EPAPER_DISPLAY_TOML_RESOURCES_H

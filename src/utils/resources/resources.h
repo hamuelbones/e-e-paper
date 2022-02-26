@@ -21,5 +21,7 @@ void* resource_get(const char* name);
 
 bool resource_unload(const char* name);
 bool resource_unload_all(void);
+void resource_new_frame(void);
+void* resource_get_element(const char* key);
 
 #endif //EPAPER_DISPLAY_RESOURCES_H

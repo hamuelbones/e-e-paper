@@ -14,6 +14,8 @@
 typedef struct {
     void* (*load_file)(const char* filename);
     void  (*unload_data)(void* context);
+    void  (*new_frame)(void* context);
+    void* (*get_element)(void* context, const char* key);
 } RESOURCE_LOAD_INTERFACE;
 
 typedef struct {
@@ -30,7 +32,7 @@ typedef struct {
 static RESOURCE_CTX resources;
 
 static const RESOURCE_LOAD_INTERFACE interfaces[RESOURCE_MAX] = {
-        [RESOURCE_TOML] = {toml_load, toml_unload},
+        [RESOURCE_TOML] = {toml_load, toml_unload, toml_new_frame, toml_get_element},
         [RESOURCE_FONT] = {font_load, font_unload}
 };
 
@@ -83,4 +85,41 @@ bool resource_unload_all(void) {
         resource_unload(resources.resource[0].name);
     }
     return true;
+}
+
+void resource_new_frame(void) {
+    for (int i=0; i<resources.count; i++) {
+        RESOURCE_TYPE type = resources.resource[i].type;
+        if (interfaces[type].new_frame) {
+            interfaces[type].new_frame(resources.resource[i].data);
+        }
+    }
+}
+
+void* resource_get_element(const char* key) {
+
+    char resource_name[30];
+    char* divider = strchr(key, ':');
+    if (!divider) {
+        return NULL;
+    }
+
+    size_t name_len = divider-key;
+    if (name_len > 29) {
+        name_len = 29;
+    }
+    memcpy(resource_name, key, name_len);
+    resource_name[name_len] = '\0';
+
+    for (int i=0; i<resources.count; i++) {
+        if (0 == strcmp(resources.resource[i].name, resource_name)) {
+            // Found the resource
+            RESOURCE_TYPE type = resources.resource[i].type;
+            if (!interfaces[type].get_element) {
+                return NULL;
+            }
+            return interfaces[type].get_element(resources.resource[i].data, divider+1);
+        }
+    }
+    return NULL;
 }
