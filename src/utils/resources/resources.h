@@ -6,6 +6,8 @@
 #define EPAPER_DISPLAY_RESOURCES_H
 
 #include <stdbool.h>
+#include "toml_resources.h"
+#include "font_resources.h"
 
 typedef enum {
     RESOURCE_TOML,

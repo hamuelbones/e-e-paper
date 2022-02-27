@@ -13,6 +13,7 @@
 #include "display_draw_geometry.h"
 #include "display_draw_text.h"
 #include "resources.h"
+#include "toml_resources.h"
 
 #include "render_toml.h"
 
@@ -114,7 +115,8 @@ void* message_box_init(toml_table_t *startup_config, toml_table_t * device_confi
 
     context->startup_config = startup_config;
     context->app_config = device_config;
-    context->messages = resource_get("messages");
+    TOML_RESOURCE_CONTEXT *ctx = resource_get("messages");
+    context->messages = ctx->document;
     context->selected_message = -1;
 
     return context;

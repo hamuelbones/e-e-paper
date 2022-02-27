@@ -407,10 +407,10 @@ static char* string_with_substitutions(const char* str) {
         }
 
         if (start_sub_tag && end_sub_tag) {
-            size_t subtitution_tag_size = end_sub_tag-start_sub_tag;
-            char* to_substitute = pvPortMalloc(subtitution_tag_size);
-            memcpy(to_substitute, start_sub_tag+1, subtitution_tag_size);
-            to_substitute[subtitution_tag_size-1] = '\0';
+            size_t substitution_tag_size = end_sub_tag-start_sub_tag;
+            char* to_substitute = pvPortMalloc(substitution_tag_size);
+            memcpy(to_substitute, start_sub_tag+1, substitution_tag_size);
+            to_substitute[substitution_tag_size-1] = '\0';
 
             toml_datum_t* substituted = resource_get_element(to_substitute);
             vPortFree(to_substitute);
@@ -674,6 +674,7 @@ void render_item(toml_table_t *item, DISPLAY_COORD offset, DISPLAY_COORD dims, R
 
 
 void render_toml(toml_table_t *render, DISPLAY_COORD dimensions) {
+    resource_new_frame();
     DISPLAY_COORD offset = {0, 0};
     render_item(render, offset, dimensions, RENDER_ROOT);
 

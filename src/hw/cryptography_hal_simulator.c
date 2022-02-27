@@ -178,3 +178,7 @@ bool cryptography_sign_rsa(const char* private_filename,
 
     return retval == 1;
 }
+bool cryptography_random_bytes(uint8_t *data, size_t len) {
+    RAND_bytes(data, len);
+    return true;
+}

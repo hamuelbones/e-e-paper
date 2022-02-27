@@ -32,7 +32,8 @@ void _Noreturn wifi_task(void* params) {
 
         switch (request.type) {
             case WIFI_CONNECT: {
-                toml_table_t *startup = resource_get("startup");
+                TOML_RESOURCE_CONTEXT *ctx = resource_get("startup");
+                toml_table_t *startup = ctx->document;
                 toml_array_t* wifi_credentials = toml_array_in(startup, "wifi");
                 int num_wifi_aps = toml_array_nelem(wifi_credentials);
                 bool succeeded = false;

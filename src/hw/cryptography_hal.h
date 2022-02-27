@@ -31,4 +31,6 @@ bool cryptography_sign_rsa(const char* private_filename,
                            uint8_t **output,
                            size_t *output_len);
 
+bool cryptography_random_bytes(uint8_t *data, size_t len);
+
 #endif //EPAPER_DISPLAY_CRYPTOGRAPHY_H
