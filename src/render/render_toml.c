@@ -412,11 +412,11 @@ static char* string_with_substitutions(const char* str) {
             memcpy(to_substitute, start_sub_tag+1, substitution_tag_size);
             to_substitute[substitution_tag_size-1] = '\0';
 
-            toml_datum_t* substituted = resource_get_element(to_substitute);
+            char* substituted = resource_get_element(to_substitute);
             vPortFree(to_substitute);
 
             if (substituted) {
-                size_t substitution_len = strlen(substituted->u.s);
+                size_t substitution_len = strlen(substituted);
 
                 if (substitution_len + current_size >= (output_size-1)) {
                     char* new_string = pvPortMalloc(substitution_len + current_size + 1);
@@ -426,10 +426,9 @@ static char* string_with_substitutions(const char* str) {
                     output_size = substitution_len + current_size + 1;
                 }
 
-                memcpy(&output_string[current_size], substituted->u.s, substitution_len);
+                memcpy(&output_string[current_size], substituted, substitution_len);
                 current_size += substitution_len;
 
-                vPortFree(substituted->u.s);
                 vPortFree(substituted);
             }
             start_sub_tag = NULL;

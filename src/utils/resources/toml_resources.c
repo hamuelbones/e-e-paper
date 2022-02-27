@@ -291,29 +291,26 @@ void* toml_get_element(void* table, const char *key) {
                 }
                 return NULL;
             } else { // At the end
-                toml_datum_t *datum = pvPortMalloc(sizeof(toml_datum_t));
-
-                *datum = toml_string_at(current_array, index);
-                if (datum->ok) {
-                    return datum;
+                toml_datum_t datum = toml_string_at(current_array, index);
+                if (datum.ok) {
+                    return datum.u.s;
                 }
-                *datum = toml_int_at(current_array, index);
-                if (datum->ok) {
-                    return datum;
+                datum = toml_int_at(current_array, index);
+                if (datum.ok) {
+                    return datum.u.s;
                 }
-                *datum = toml_double_at(current_array, index);
-                if (datum->ok) {
-                    return datum;
+                datum = toml_double_at(current_array, index);
+                if (datum.ok) {
+                    return datum.u.s;
                 }
-                *datum = toml_bool_at(current_array, index);
-                if (datum->ok) {
-                    return datum;
+                datum = toml_bool_at(current_array, index);
+                if (datum.ok) {
+                    return datum.u.s;
                 }
-                *datum = toml_timestamp_at(current_array, index);
-                if (datum->ok) {
-                    return datum;
+                datum = toml_timestamp_at(current_array, index);
+                if (datum.ok) {
+                    return datum.u.s;
                 }
-                vPortFree(datum);
                 return NULL;
             }
 
@@ -322,30 +319,29 @@ void* toml_get_element(void* table, const char *key) {
                 return NULL;
             }
 
-            toml_datum_t *datum = pvPortMalloc(sizeof(toml_datum_t));
+            toml_datum_t datum;
 
-            *datum = toml_string_in(current_table, current_name);
-            if (datum->ok) {
-                return datum;
+            datum = toml_string_in(current_table, current_name);
+            if (datum.ok) {
+                return datum.u.s;
             }
-            *datum = toml_int_in(current_table, current_name);
-            if (datum->ok) {
-                return datum;
+            datum = toml_int_in(current_table, current_name);
+            if (datum.ok) {
+                return datum.u.s;
             }
-            *datum = toml_double_in(current_table, current_name);
-            if (datum->ok) {
-                return datum;
+            datum = toml_double_in(current_table, current_name);
+            if (datum.ok) {
+                return datum.u.s;
             }
-            *datum = toml_bool_in(current_table, current_name);
-            if (datum->ok) {
-                return datum;
+            datum = toml_bool_in(current_table, current_name);
+            if (datum.ok) {
+                return datum.u.s;
             }
-            *datum = toml_timestamp_in(current_table, current_name);
-            if (datum->ok) {
-                return datum;
+            datum = toml_timestamp_in(current_table, current_name);
+            if (datum.ok) {
+                return datum.u.s;
             }
-            vPortFree(datum);
-            return  NULL;
+            return NULL;
         }
     }
 }

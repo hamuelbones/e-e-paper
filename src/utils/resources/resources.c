@@ -5,6 +5,7 @@
 
 #include "toml_resources.h"
 #include "font_resources.h"
+#include "clock_resources.h"
 #include "resources.h"
 #include "filesystem_hal.h"
 
@@ -33,7 +34,8 @@ static RESOURCE_CTX resources;
 
 static const RESOURCE_LOAD_INTERFACE interfaces[RESOURCE_MAX] = {
         [RESOURCE_TOML] = {toml_load, toml_unload, toml_new_frame, toml_get_element},
-        [RESOURCE_FONT] = {font_load, font_unload}
+        [RESOURCE_FONT] = {font_load, font_unload},
+        [RESOURCE_CLOCK] = {clock_load, clock_unload, NULL, clock_get_element},
 };
 
 bool resource_load(const char* file_name, const char *resource_name, RESOURCE_TYPE type) {

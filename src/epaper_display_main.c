@@ -201,6 +201,8 @@ static bool _refresh_resource(int num) {
 
 static int _load_startup_file(void) {
 
+    resource_load("DUMMY", "time", RESOURCE_CLOCK);
+
     // save settings From SD if it exists.
     if (file_exists(SD_MOUNT_POINT STARTUP_FILENAME)) {
         file_copy(INTERNAL_MOUNT_POINT STARTUP_FILENAME, SD_MOUNT_POINT STARTUP_FILENAME);

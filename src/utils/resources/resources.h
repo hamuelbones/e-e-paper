@@ -12,6 +12,7 @@
 typedef enum {
     RESOURCE_TOML,
     RESOURCE_FONT,
+    RESOURCE_CLOCK,
     RESOURCE_MAX,
 } RESOURCE_TYPE;
 
