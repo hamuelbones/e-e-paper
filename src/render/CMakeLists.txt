@@ -5,6 +5,6 @@ else()
     idf_component_register(
             SRCS "render_toml.c"
             INCLUDE_DIRS "."
-            REQUIRES font display tomlc99
+            REQUIRES font display tomlc99 resources
     )
 endif()

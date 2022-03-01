@@ -46,7 +46,7 @@ int fs_mount(void) {
 
     // Options for mounting the filesystem.
     esp_vfs_fat_sdmmc_mount_config_t sd_mount_config = {
-            .format_if_mount_failed = false,
+            .format_if_mount_failed = true,
             .max_files = 2,
             .allocation_unit_size = 16 * 1024
     };

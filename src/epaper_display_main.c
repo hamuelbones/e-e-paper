@@ -23,13 +23,12 @@
 #include "cryptography_hal.h"
 #include "jwt.h"
 #include "epaper_display_main.h"
+#include "display_buffer.h"
 
-#include "apps.h"
-#include "message_box_app.h"
+#include "render_toml.h"
+#include "epaper_hal.h"
 
 #include "init_hal.h"
-
-#define NUMBER_OF_APPS (1)
 
 #define MAIN_MESSAGE_BUFFER_SIZE (400)
 #define MAIN_MESSAGE_MAX_SIZE (100)
@@ -77,11 +76,8 @@ typedef enum {
 
 static MessageBufferHandle_t message_buffer;
 
-static const APP_INTERFACE *_apps[NUMBER_OF_APPS] = {
-    &g_message_box_interface
-};
 
-static void* _currentAppContext = NULL;
+
 static TimerHandle_t _currentAppTimer = NULL;
 static TimerHandle_t _refreshTimer = NULL;
 static bool standalone = false;
@@ -295,6 +291,7 @@ static int _load_config_file(void) {
 static int _state_init(uint8_t *message, size_t len)  {
     switch (message[0]) {
         case MAIN_MESSAGE_LOAD_STARTUP:
+            epaper_init();
             return _load_startup_file();
         default:
             break;
@@ -492,58 +489,51 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
 
 static int _state_run_app(uint8_t *message, size_t len) {
 
-    static const APP_INTERFACE *current_app;
-
     switch(message[0]) {
         case MAIN_MESSAGE_APP_INIT: {
-            current_app = NULL;
+            uint32_t refresh_seconds = 10;
             TOML_RESOURCE_CONTEXT *ctx = resource_get("config");
-            toml_table_t *device_config = ctx->document;
-            toml_table_t *app_info = toml_table_in(device_config, "application");
-            toml_datum_t app_name = toml_string_in(app_info, "name");
-
-            ctx = resource_get("startup");
-            toml_table_t *startup_config = ctx->document;
+            toml_table_t *app_info = toml_table_in(ctx->document, "application");
+            if (app_info) {
+                toml_datum_t refresh = toml_int_in(app_info, "refresh_interval_sec");
+                if (refresh.ok) {
+                    refresh_seconds = refresh.u.i;
+                }
+            }
 
             // Done with WiFi!
             WIFI_REQUEST request = {};
             request.type = WIFI_DISCONNECT;
             xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
 
-            for (int i=0; i<NUMBER_OF_APPS; i++) {
-                if (strcmp(app_name.u.s, _apps[i]->name) == 0) {
-                    current_app = _apps[i];
-                    break;
-                }
+            if (!_currentAppTimer) {
+                _currentAppTimer = xTimerCreate("App", 1000*refresh_seconds/portTICK_PERIOD_MS, pdTRUE,
+                                                NULL, _app_timer_callback);
+            } else {
+                xTimerChangePeriod(_currentAppTimer, 1000*refresh_seconds/portTICK_PERIOD_MS, portMAX_DELAY);
             }
-            if (current_app) {
-                _currentAppContext = current_app->app_init(startup_config, device_config);
-                if (!_currentAppTimer) {
-                    _currentAppTimer = xTimerCreate("App", current_app->refresh_rate_ms/portTICK_PERIOD_MS, pdTRUE,
-                                                    NULL, _app_timer_callback);
-                } else {
-                    xTimerChangePeriod(_currentAppTimer, current_app->refresh_rate_ms/portTICK_PERIOD_MS, portMAX_DELAY);
-                }
-                xTimerStart(_currentAppTimer, portMAX_DELAY);
+            xTimerStart(_currentAppTimer, portMAX_DELAY);
 
-                if (_refreshTimer) {
-                    _refreshTimer = xTimerCreate("Ref", 30*60*1000/portTICK_PERIOD_MS, pdTRUE, NULL, _refresh_callback);
-                }
-                _app_timer_callback(NULL);
+            if (!_refreshTimer) {
+                _refreshTimer = xTimerCreate("Ref", 30*60*1000/portTICK_PERIOD_MS, pdTRUE, NULL, _refresh_callback);
             }
+            _app_timer_callback(NULL);
         }
             break;
         case MAIN_MESSAGE_APP: {
-            if (current_app) {
-                current_app->app_process(_currentAppContext, message+1, len-1);
-            }
+            dispbuf_swap();
+            dispbuf_clear_active();
+
+            TOML_RESOURCE_CONTEXT *ctx = resource_get("config");
+            toml_table_t *device_config = ctx->document;
+            toml_table_t *drawing_root = toml_table_in(device_config, "render");
+            DISPLAY_COORD dims = {DISPLAY_WIDTH, DISPLAY_HEIGHT};
+            render_toml(drawing_root, dims);
+
+            epaper_render_buffer(dispbuf_active_buffer(), dispbuf_inactive_buffer(), BUFFER_SIZE);
             return -1;
         }
         case MAIN_MESSAGE_TRIGGER_REFRESH: {
-            if (current_app) {
-                current_app->app_deinit(_currentAppContext);
-                xTimerStop(_currentAppTimer, portMAX_DELAY);
-            }
             resource_unload_all();
             return _load_startup_file();
         }

@@ -22,7 +22,6 @@ if(SIMULATOR)
     target_link_directories(epaper_display PRIVATE ${OPENSSL_LIBRARY_DIRS})
 
 
-    add_subdirectory(apps)
     add_subdirectory(display)
     add_subdirectory(freertos)
     add_subdirectory(font)
@@ -33,7 +32,7 @@ if(SIMULATOR)
 else()
     idf_component_register(
             SRCS "epaper_display_main.c" "wifi_task.c"
-            INCLUDE_DIRS "." "apps/"
-            REQUIRES font display hw tomlc99 message_box utils freertos
+            INCLUDE_DIRS "."
+            REQUIRES font display hw tomlc99 utils freertos resources render
     )
 endif()
