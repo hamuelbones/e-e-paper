@@ -52,8 +52,19 @@ void _Noreturn wifi_task(void* params) {
                         // success
                         printf("Connection successful\n");
                         succeeded = true;
+                    }
+
+                    if (ssid.ok) {
+                        vPortFree(ssid.u.s);
+                    }
+                    if (password.ok) {
+                        vPortFree(password.u.s);
+                    }
+
+                    if (succeeded) {
                         break;
                     }
+
                 }
                 if (request.cb) {
                     WIFI_CONNECT_RESPONSE resp_data = {.connected = succeeded};

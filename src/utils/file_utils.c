@@ -4,6 +4,7 @@
 
 #include "file_utils.h"
 #include "toml.h"
+#include "freertos/FreeRTOS.h"
 #include <string.h>
 
 bool file_copy(const char* to, const char* from) {
@@ -83,6 +84,7 @@ bool file_load_uuid(const char* path, char uuid[37]) {
     }
 
     strcpy(uuid, toml_uuid.u.s);
+    vPortFree(toml_uuid.u.s);
     toml_free(root);
     return true;
 }

@@ -11,6 +11,8 @@
 void* toml_load(const char* file_name);
 void toml_unload(void* table);
 void toml_new_frame(void* table);
+
+// Returns allocated element/string. Must be freed after use
 void* toml_get_element(void* table, const char *key);
 
 typedef struct {

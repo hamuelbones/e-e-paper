@@ -220,6 +220,9 @@ static bool _refresh_resource(int num) {
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
     } else {
         _issue_get_request(url.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, jwt.u.b, ssl.u.b);
+    }
+
+    if (url.ok) {
         vPortFree(url.u.s);
     }
 
@@ -267,6 +270,7 @@ static int _load_startup_file(void) {
         return MAIN_STATE_INIT_ERROR;
     }
 
+    int new_state = 0;
     printf("Toml startup file loaded!\n");
     if (strcmp("standalone", mode.u.s) == 0) {
         standalone = true;
@@ -274,7 +278,7 @@ static int _load_startup_file(void) {
         uint8_t message = MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY;
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
 
-        return MAIN_STATE_REFRESH_CONFIG;
+        new_state = MAIN_STATE_REFRESH_CONFIG;
     } else if (strcmp("online", mode.u.s) == 0) {
         // Online mode - we should connect to WiFi
         standalone = false;
@@ -283,13 +287,16 @@ static int _load_startup_file(void) {
                 .cb = _handle_connection,
         };
         xMessageBufferSend(wifi_message_buffer(), &request, sizeof(request), portMAX_DELAY);
-        return MAIN_STATE_CONNECT;
+        new_state = MAIN_STATE_CONNECT;
     } else {
         printf("Unknown run mode\n");
         char message = MAIN_MESSAGE_REBOOT;
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
-        return MAIN_STATE_INIT_ERROR;
+        new_state = MAIN_STATE_INIT_ERROR;
     }
+
+    vPortFree(mode.u.s);
+    return new_state;
 
 }
 
@@ -469,11 +476,18 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
             TOML_RESOURCE_CONTEXT *ctx = resource_get("config");
             toml_array_t* resources = toml_array_in(ctx->document, "resource");
             toml_table_t* resource_info = toml_table_at(resources, (int)current_resource_fetch_id);
-            toml_datum_t name = toml_string_in(resource_info, "local_filename");;
+            toml_datum_t name = toml_string_in(resource_info, "local_filename");
             toml_datum_t resource_name = toml_string_in(resource_info, "name");
 
-            if (!name.ok) {
-                printf("Resource name not specified...\n");
+            if (!name.ok || !resource_name.ok) {
+                if (name.ok) {
+                    vPortFree(name.u.s);
+                }
+                if (resource_name.ok) {
+                    vPortFree(resource_name.u.s);
+                }
+
+                printf("Resource file name not specified...\n");
                 current_resource_fetch_id++;
                 if (_refresh_resource(current_resource_fetch_id)) {
                     return -1;
@@ -509,6 +523,9 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
                     resource_load(to, resource_name.u.s, RESOURCE_FONT);
                 }
             }
+
+            vPortFree(name.u.s);
+            vPortFree(resource_name.u.s);
 
             current_resource_fetch_id++;
             if (_refresh_resource(current_resource_fetch_id)) {
