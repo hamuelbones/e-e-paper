@@ -76,11 +76,13 @@ void _Noreturn wifi_task(void* params) {
                 bool succeeded = wifi_http_get(request.get.host,
                                               request.get.subdirectory,
                                               (const char**)request.get.headers,
+                                              request.get.use_ssl,
                                               request.get.header_count,
                                               request.get.headers_filename,
                                               request.get.response_filename,
                                               &status);
                 printf("Response status(%u): %u\n", succeeded, status);
+
                 if (request.cb) {
                     WIFI_GET_RESPONSE response = {.status = status};
                     request.cb(request.cb_params, &response);

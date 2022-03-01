@@ -21,6 +21,7 @@ typedef struct {
     char * host;
     char * subdirectory;
     char ** headers;
+    bool use_ssl;
     size_t header_count;
     char * headers_filename;
     char * response_filename;

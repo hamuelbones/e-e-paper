@@ -159,6 +159,7 @@ bool wifi_http_get(const char* host,
                   const char* subdirectory,
                   const char** headers,
                   size_t header_count,
+                  bool use_ssl,
 
                   const char* headers_filename,
                   const char* response_filename,
@@ -170,7 +171,11 @@ bool wifi_http_get(const char* host,
 
     config.method = HTTP_METHOD_GET;
     char* full_url = pvPortMalloc(8 + strlen(host) + strlen(subdirectory) + 1);
-    strcpy(full_url, "https://");
+    if (use_ssl) {
+        strcpy(full_url, "https://");
+    } else {
+        strcpy(full_url, "http://");
+    }
     strcat(full_url, host);
     strcat(full_url, subdirectory);
     config.url = full_url;

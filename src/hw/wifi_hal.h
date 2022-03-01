@@ -12,6 +12,7 @@ bool wifi_http_get(const char* host,
                   const char* subdirectory,
                   const char** headers,
                   size_t header_count,
+                  bool use_ssl,
 
                   const char* headers_filename,
                   const char* response_filename,

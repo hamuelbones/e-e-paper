@@ -123,26 +123,51 @@ static void _handle_time_synced(void* params, void* response) {
 
 static void _handle_get(void* params, void* response) {
     WIFI_GET_RESPONSE *get = response;
-    char** headers = params;
+    WIFI_REQUEST *request = params;
 
     uint8_t message[3] = {MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY, get->status & 0xFF, get->status>>8 & 0xFF};
     xMessageBufferSend(message_buffer, &message, 3, portMAX_DELAY);
 
-
-    if (headers) {
-        vPortFree(headers);
+    if (request->get.headers) {
+        vPortFree(request->get.headers);
     }
+    vPortFree(request->get.host);
+    vPortFree(request->get.subdirectory);
 }
 
-static void _issue_get_request(const char* host, const char* subdirectory, const char* destination, bool use_jwt) {
+static void _issue_get_request(char* url, const char* destination, bool use_jwt, bool use_ssl) {
+
+
+
+    char* divider = strchr(url, '/');
+    size_t host_len;
+    char * host;
+    char * directory;
+    if (divider) {
+        host_len = divider - url;
+        host = pvPortMalloc(host_len+1);
+        memcpy(host, url, host_len);
+        host[host_len] = '\0';
+        size_t directory_len = strlen(divider);
+        directory = pvPortMalloc(directory_len+1);
+        strcpy(directory, divider);
+    } else {
+        host_len = strlen(url);
+        host = pvPortMalloc(host_len+1);
+        strcpy(host, url);
+        directory = pvPortMalloc(2);
+        strcpy(directory, "/");
+    }
+
 
     WIFI_REQUEST request = {
             .type = WIFI_GET,
             .cb = _handle_get,
             .get = {
                     .host = (char*)host,
-                    .subdirectory = (char*)subdirectory,
+                    .subdirectory = (char*)directory,
                     .headers = NULL,
+                    .use_ssl = use_ssl,
                     .header_count = 0,
                     .headers_filename = NULL,
                     .response_filename = (char*) destination,
@@ -158,7 +183,7 @@ static void _issue_get_request(const char* host, const char* subdirectory, const
     }
 
     // Provide context struct back so we can clean up
-    request.cb_params = request.get.headers;
+    request.cb_params = &request;
 
     xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
 }
@@ -179,16 +204,23 @@ static bool _refresh_resource(int num) {
         return false;
     }
 
-    toml_datum_t host = toml_string_in(resource_info, "host");
-    toml_datum_t dir = toml_string_in(resource_info, "dir");
-    toml_datum_t auth = toml_bool_in(resource_info, "auth");
+    toml_datum_t url = toml_string_in(resource_info, "url");
+    toml_datum_t jwt = toml_bool_in(resource_info, "jwt");
+    if (!jwt.ok) {
+        jwt.u.b = false;
+    }
+    toml_datum_t ssl = toml_bool_in(resource_info, "ssl");
+    if (!ssl.ok) {
+        ssl.u.b = true;
+    }
 
-    if (standalone || (!host.ok || !dir.ok)) {
+    if (standalone || (!url.ok)) {
         // Just load the resource
         uint8_t message = MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY;
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
     } else {
-        _issue_get_request(host.u.s, dir.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, auth.u.b);
+        _issue_get_request(url.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, jwt.u.b, ssl.u.b);
+        vPortFree(url.u.s);
     }
 
     return true;
@@ -361,20 +393,26 @@ static int _state_refresh_time(uint8_t *message, size_t len) {
                 xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
                 return MAIN_STATE_INIT_ERROR;
             }
-            toml_datum_t host, subdirectory;
-            host = toml_string_in(server, "host");
-            if (!host.ok) {
+            toml_datum_t url;
+            url = toml_string_in(server, "url");
+            if (!url.ok) {
                 printf("No server hostname provided for configuration.\n");
                 char message = MAIN_MESSAGE_REBOOT;
                 xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
                 return MAIN_STATE_INIT_ERROR;
             }
-            subdirectory = toml_string_in(server, "config_dir");
-            if (!subdirectory.ok) {
-                printf("No server subdirectory provided for configuration.\n");
+
+            toml_datum_t ssl = toml_bool_in(server, "ssl");
+            if (!ssl.ok) {
+                ssl.u.b = true;
+            }
+            toml_datum_t use_jwt = toml_bool_in(server, "jwt");
+            if (!use_jwt.ok) {
+                use_jwt.u.b = true;
             }
 
-            _issue_get_request(host.u.s, subdirectory.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, true);
+            _issue_get_request(url.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, use_jwt.u.b, ssl.u.b);
+            vPortFree(url.u.s);
 
             return MAIN_STATE_REFRESH_CONFIG;
         }
