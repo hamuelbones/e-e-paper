@@ -135,6 +135,7 @@ static void _handle_get(void* params, void* response) {
     }
     vPortFree(request->get.host);
     vPortFree(request->get.subdirectory);
+    vPortFree(request);
 }
 
 static void _issue_get_request(char* url, const char* destination, bool use_jwt, bool use_ssl, bool is_ota_update) {
@@ -160,33 +161,31 @@ static void _issue_get_request(char* url, const char* destination, bool use_jwt,
     }
 
 
-    WIFI_REQUEST request = {
-            .type = WIFI_GET,
-            .cb = _handle_get,
-            .get = {
-                    .host = (char*)host,
-                    .subdirectory = (char*)directory,
-                    .headers = NULL,
-                    .use_ssl = use_ssl,
-                    .is_ota_update = is_ota_update,
-                    .header_count = 0,
-                    .headers_filename = NULL,
-                    .response_filename = (char*) destination,
-            },
-    };
+    WIFI_REQUEST *request = pvPortMalloc(sizeof(WIFI_REQUEST));
+    memset(request, 0, sizeof(WIFI_REQUEST));
+    request->type = WIFI_GET;
+    request->cb = _handle_get;
+    request->get.host = (char*)host;
+    request->get.subdirectory = (char*)directory;
+    request->get.headers = NULL;
+    request->get.use_ssl = use_ssl;
+    request->get.is_ota_update = is_ota_update;
+    request->get.header_count = 0;
+    request->get.headers_filename = NULL;
+    request->get.response_filename = (char*) destination;
 
     if (use_jwt) {
         char** headers = {pvPortMalloc(sizeof(char*))};
         headers[0] = jwt_header;
 
-        request.get.headers = headers;
-        request.get.header_count = 1;
+        request->get.headers = headers;
+        request->get.header_count = 1;
     }
 
     // Provide context struct back so we can clean up
-    request.cb_params = &request;
+    request->cb_params = request;
 
-    xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
+    xMessageBufferSend(wifi_message_buffer(), request, sizeof(WIFI_REQUEST), portMAX_DELAY);
 }
 
 static bool _refresh_resource(int num) {

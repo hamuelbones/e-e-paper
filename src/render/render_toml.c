@@ -333,6 +333,7 @@ static void render_symbol(toml_table_t *symbol,
             printf("Couldn't find font: %s", font.u.s);
             font_to_use = font_get_table(SYSTEM_SYMBOLS);
         }
+        vPortFree(font.u.s);
     }
 
 

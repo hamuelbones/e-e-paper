@@ -190,14 +190,14 @@ bool wifi_http_get(const char* host,
     if (is_ota_update) {
         printf("Attempting to download update from %s\n", config.url);
         esp_err_t ret = esp_https_ota(&config);
-        vPortFree(full_url);
 
         if (ret == ESP_OK) {
-            printf("Update downloaded -rebooting");
+            printf("Update downloaded -rebooting\n");
             app_hal_reboot();
         } else {
-            printf("Firmware update download failed");
+            printf("Firmware update download failed\n");
         }
+        vPortFree(full_url);
         return false;
     }
 
