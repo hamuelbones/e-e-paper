@@ -143,7 +143,7 @@ char *resource_make_substitutions(const char *str) {
             escape = true;
             str++;
             continue;
-        } else if (!escape && *str == '|') {
+        } else if (!escape && *str == '$') {
             if (!start_sub_tag) {
                 start_sub_tag = str;
             } else {
