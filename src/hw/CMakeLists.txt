@@ -5,6 +5,7 @@ if(SIMULATOR)
             epaper_hal_simulator.c
             filesystem_hal_simulator.c
             cryptography_hal_simulator.c
+            init_hal_simulator.c
             time_hal_simulator.c
             wifi_hal_simulator.c)
 else()
@@ -16,6 +17,6 @@ else()
                  "cryptography_hal_esp32c.c"
                  "time_hal_esp32c.c"
             INCLUDE_DIRS "."
-            REQUIRES spi_flash nvs_flash fatfs esp_http_client lwip spiffs mbedtls esp_pm freertos
+            REQUIRES spi_flash nvs_flash fatfs spiffs esp_http_client esp_https_ota app_update lwip mbedtls esp_pm freertos
     )
 endif()

@@ -25,6 +25,7 @@ typedef struct {
     size_t header_count;
     char * headers_filename;
     char * response_filename;
+    bool is_ota_update;
 } WIFI_GET_ARGS;
 
 typedef struct {

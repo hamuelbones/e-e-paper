@@ -6,6 +6,7 @@
 #include "esp_system.h"
 #include "esp_spi_flash.h"
 #include "esp_pm.h"
+#include "esp_ota_ops.h"
 
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -144,8 +145,4 @@ void app_hal_init(void) {
     power_config.max_freq_mhz = CONFIG_ESP32C3_DEFAULT_CPU_FREQ_MHZ;
     esp_pm_configure(&power_config);
 
-}
-
-void app_hal_reboot(void) {
-    esp_restart();
 }

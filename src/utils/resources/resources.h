@@ -8,8 +8,10 @@
 #include <stdbool.h>
 #include "toml_resources.h"
 #include "font_resources.h"
+#include "system_resources.h"
 
 typedef enum {
+    RESOURCE_SYSTEM,
     RESOURCE_TOML,
     RESOURCE_FONT,
     RESOURCE_CLOCK,
@@ -26,5 +28,7 @@ bool resource_unload(const char* name);
 bool resource_unload_all(void);
 void resource_new_frame(void);
 void* resource_get_element(const char* key);
+
+char *resource_make_substitutions(const char *input);
 
 #endif //EPAPER_DISPLAY_RESOURCES_H

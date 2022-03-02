@@ -13,6 +13,7 @@ bool wifi_http_get(const char* host,
                   const char** headers,
                   size_t header_count,
                   bool use_ssl,
+                  bool is_ota_update,
 
                   const char* headers_filename,
                   const char* response_filename,

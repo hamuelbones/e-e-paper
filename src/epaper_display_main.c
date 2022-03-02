@@ -50,6 +50,8 @@ typedef enum {
     MAIN_STATE_SYNC_TIME,
     // Getting config.toml from the server
     MAIN_STATE_REFRESH_CONFIG,
+    // Check for updates
+    MAIN_STATE_UPDATE_CHECK,
     // Getting resources described in the config.toml
     MAIN_STATE_REFRESH_RESOURCES,
     MAIN_STATE_RUN_APP,
@@ -135,9 +137,7 @@ static void _handle_get(void* params, void* response) {
     vPortFree(request->get.subdirectory);
 }
 
-static void _issue_get_request(char* url, const char* destination, bool use_jwt, bool use_ssl) {
-
-
+static void _issue_get_request(char* url, const char* destination, bool use_jwt, bool use_ssl, bool is_ota_update) {
 
     char* divider = strchr(url, '/');
     size_t host_len;
@@ -168,6 +168,7 @@ static void _issue_get_request(char* url, const char* destination, bool use_jwt,
                     .subdirectory = (char*)directory,
                     .headers = NULL,
                     .use_ssl = use_ssl,
+                    .is_ota_update = is_ota_update,
                     .header_count = 0,
                     .headers_filename = NULL,
                     .response_filename = (char*) destination,
@@ -219,7 +220,7 @@ static bool _refresh_resource(int num) {
         uint8_t message = MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY;
         xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
     } else {
-        _issue_get_request(url.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, jwt.u.b, ssl.u.b);
+        _issue_get_request(url.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, jwt.u.b, ssl.u.b, false);
     }
 
     if (url.ok) {
@@ -232,6 +233,7 @@ static bool _refresh_resource(int num) {
 
 static int _load_startup_file(void) {
 
+    resource_load("DUMMY", "system", RESOURCE_SYSTEM);
     resource_load("DUMMY", "time", RESOURCE_CLOCK);
 
     // save settings From SD if it exists.
@@ -300,11 +302,14 @@ static int _load_startup_file(void) {
 
 }
 
-static int _load_config_file(void) {
-
-    resource_load(INTERNAL_MOUNT_POINT APP_CONFIG_FILENAME, "config", RESOURCE_TOML);
+static int _load_config_file(bool update_check) {
 
     TOML_RESOURCE_CONTEXT *toml_ctx = resource_get("config");
+    if (!toml_ctx) {
+        resource_load(INTERNAL_MOUNT_POINT APP_CONFIG_FILENAME, "config", RESOURCE_TOML);
+        toml_ctx = resource_get("config");
+    }
+
     toml_table_t *device_config = toml_ctx->document;
     if (!device_config) {
         printf("Toml config file load error\n");
@@ -314,6 +319,29 @@ static int _load_config_file(void) {
     }
 
     printf("TOML configuration file loaded \n");
+    if (update_check) {
+        toml_table_t *update_info = toml_table_in(device_config, "update");
+        if (update_info) {
+            toml_datum_t url = toml_string_in(update_info, "url");
+            if (url.ok) {
+                char *full_url = resource_make_substitutions(url.u.s);
+                toml_datum_t jwt = toml_bool_in(update_info, "jwt");
+                if (!jwt.ok) {
+                    jwt.u.b = false;
+                }
+                toml_datum_t ssl = toml_bool_in(update_info, "ssl");
+                if (!ssl.ok) {
+                    ssl.u.b = false;
+                }
+
+                _issue_get_request(full_url, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, jwt.u.b, ssl.u.b, true);
+                vPortFree(url.u.s);
+                vPortFree(full_url);
+                return MAIN_STATE_UPDATE_CHECK;
+            }
+        }
+
+    }
 
     toml_array_t *resources = toml_array_in(device_config, "resource");
     if (resources) {
@@ -373,55 +401,59 @@ static int _state_connect(uint8_t *message, size_t len) {
     return -1;
 }
 
+static int _attempt_to_get_config(void) {
+
+    // Getting any response means that OTA update was not available or failed.
+
+    char uuid[37] = "invalid key";
+    file_load_uuid(SD_MOUNT_POINT "key_uuid.toml", uuid);
+    // Generate JWT now that we ahve network time
+    JWT_CTX *jwt = jwt_new("RS256", last_unix_time, 1000, _generate_jwt_signature_rsa, NULL);
+    jwt_add_string(jwt, JWT_HEADER, "kid", uuid);
+    strcpy(jwt_header, "Authorization: Bearer ");
+    size_t offset = strlen(jwt_header);
+    jwt_serialize(jwt, jwt_header+offset, 600-offset);
+
+    jwt_destroy(jwt);
+
+    TOML_RESOURCE_CONTEXT *toml_ctx = resource_get("startup");
+    toml_table_t *startup = toml_ctx->document;
+    toml_table_t *server = toml_table_in(startup, "server");
+    if (!server) {
+        printf("No server configuration found.\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
+        return MAIN_STATE_INIT_ERROR;
+    }
+    toml_datum_t url;
+    url = toml_string_in(server, "url");
+    if (!url.ok) {
+        printf("No server hostname provided for configuration.\n");
+        char message = MAIN_MESSAGE_REBOOT;
+        xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
+        return MAIN_STATE_INIT_ERROR;
+    }
+
+    toml_datum_t ssl = toml_bool_in(server, "ssl");
+    if (!ssl.ok) {
+        ssl.u.b = true;
+    }
+    toml_datum_t use_jwt = toml_bool_in(server, "jwt");
+    if (!use_jwt.ok) {
+        use_jwt.u.b = true;
+    }
+
+    _issue_get_request(url.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, use_jwt.u.b, ssl.u.b, false);
+    vPortFree(url.u.s);
+
+    return MAIN_STATE_REFRESH_CONFIG;
+}
 
 static int _state_refresh_time(uint8_t *message, size_t len) {
     switch(message[0]) {
         case MAIN_MESSAGE_TIME_SYNCED: {
-
             memcpy(&last_unix_time, &message[1], 4);
-
-            char uuid[37] = "invalid key";
-            file_load_uuid(SD_MOUNT_POINT "key_uuid.toml", uuid);
-            // Generate JWT now that we ahve network time
-            JWT_CTX *jwt = jwt_new("RS256", last_unix_time, 1000, _generate_jwt_signature_rsa, NULL);
-            jwt_add_string(jwt, JWT_HEADER, "kid", uuid);
-            strcpy(jwt_header, "Authorization: Bearer ");
-            size_t offset = strlen(jwt_header);
-            jwt_serialize(jwt, jwt_header+offset, 600-offset);
-
-            jwt_destroy(jwt);
-
-            TOML_RESOURCE_CONTEXT *toml_ctx = resource_get("startup");
-            toml_table_t *startup = toml_ctx->document;
-            toml_table_t *server = toml_table_in(startup, "server");
-            if (!server) {
-                printf("No server configuration found.\n");
-                char message = MAIN_MESSAGE_REBOOT;
-                xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
-                return MAIN_STATE_INIT_ERROR;
-            }
-            toml_datum_t url;
-            url = toml_string_in(server, "url");
-            if (!url.ok) {
-                printf("No server hostname provided for configuration.\n");
-                char message = MAIN_MESSAGE_REBOOT;
-                xMessageBufferSend(message_buffer, &message, 1, portMAX_DELAY);
-                return MAIN_STATE_INIT_ERROR;
-            }
-
-            toml_datum_t ssl = toml_bool_in(server, "ssl");
-            if (!ssl.ok) {
-                ssl.u.b = true;
-            }
-            toml_datum_t use_jwt = toml_bool_in(server, "jwt");
-            if (!use_jwt.ok) {
-                use_jwt.u.b = true;
-            }
-
-            _issue_get_request(url.u.s, SD_MOUNT_POINT REQUEST_TEMPORARY_FILENAME, use_jwt.u.b, ssl.u.b);
-            vPortFree(url.u.s);
-
-            return MAIN_STATE_REFRESH_CONFIG;
+            return _attempt_to_get_config();
         }
         case MAIN_MESSAGE_TIME_SYNC_FAILED:
             if (wifi_connected()) {
@@ -455,7 +487,7 @@ static int _state_refresh_config(uint8_t *message, size_t len) {
             }
 
             // May load resources if necessary
-            int next_state = _load_config_file();
+            int next_state = _load_config_file(true);
             return next_state;
         }
         default:
@@ -463,6 +495,16 @@ static int _state_refresh_config(uint8_t *message, size_t len) {
     }
     return -1;
 }
+
+
+static int _state_ota_update_check(uint8_t *message, size_t len) {
+
+    if (message[0] == MAIN_MESSAGE_CONFIG_OR_RESOURCE_READY) {
+        return _load_config_file(false);
+    }
+    return -1;
+}
+
 
 static int _state_refresh_resources(uint8_t *message, size_t len) {
 
@@ -605,6 +647,7 @@ static int (*_main_states[MAIN_STATE_MAX])(uint8_t * message, size_t len) = {
         [MAIN_STATE_CONNECT] = _state_connect,
         [MAIN_STATE_SYNC_TIME] = _state_refresh_time,
         [MAIN_STATE_REFRESH_CONFIG] = _state_refresh_config,
+        [MAIN_STATE_UPDATE_CHECK] = _state_ota_update_check,
         [MAIN_STATE_REFRESH_RESOURCES] = _state_refresh_resources,
         [MAIN_STATE_RUN_APP] = _state_run_app,
 };

@@ -5,11 +5,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "wifi_hal.h"
+#include "init_hal.h"
 
 #include "esp_event_base.h"
 #include "esp_event.h"
 #include "esp_wifi.h"
 #include "esp_http_client.h"
+#include "esp_https_ota.h"
 #include "filesystem_hal.h"
 
 #include "sntp.h"
@@ -160,6 +162,7 @@ bool wifi_http_get(const char* host,
                   const char** headers,
                   size_t header_count,
                   bool use_ssl,
+                  bool is_ota_update,
 
                   const char* headers_filename,
                   const char* response_filename,
@@ -182,9 +185,25 @@ bool wifi_http_get(const char* host,
 
     // TODO - Check server certificate
 
+
+    // Special OTA update integration
+    if (is_ota_update) {
+        printf("Attempting to download update from %s\n", config.url);
+        esp_err_t ret = esp_https_ota(&config);
+        vPortFree(full_url);
+
+        if (ret == ESP_OK) {
+            printf("Update downloaded -rebooting");
+            app_hal_reboot();
+        } else {
+            printf("Firmware update download failed");
+        }
+        return false;
+    }
+
+
     esp_http_client_handle_t handle = esp_http_client_init(&config);
     vPortFree(full_url);
-
 
     for (int i=0; i<header_count; i++) {
         size_t header_len = strlen(headers[i]);
@@ -197,6 +216,7 @@ bool wifi_http_get(const char* host,
 
         vPortFree(header_copy);
     }
+
 
     esp_http_client_open(handle, 0);
     int content_length = esp_http_client_fetch_headers(handle);

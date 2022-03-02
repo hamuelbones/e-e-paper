@@ -87,8 +87,9 @@ void _Noreturn wifi_task(void* params) {
                 bool succeeded = wifi_http_get(request.get.host,
                                               request.get.subdirectory,
                                               (const char**)request.get.headers,
-                                              request.get.use_ssl,
                                               request.get.header_count,
+                                              request.get.use_ssl,
+                                              request.get.is_ota_update,
                                               request.get.headers_filename,
                                               request.get.response_filename,
                                               &status);

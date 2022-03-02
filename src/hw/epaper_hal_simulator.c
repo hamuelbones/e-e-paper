@@ -39,7 +39,3 @@ void epaper_render_buffer(const uint8_t *buffer, const uint8_t *old_buffer, size
     }
 }
 
-
-void app_hal_reboot(void) {
-    exit(0);
-}

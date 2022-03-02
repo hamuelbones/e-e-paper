@@ -33,6 +33,7 @@ typedef struct {
 static RESOURCE_CTX resources;
 
 static const RESOURCE_LOAD_INTERFACE interfaces[RESOURCE_MAX] = {
+        [RESOURCE_SYSTEM] = {system_load, system_unload, NULL, system_get_element},
         [RESOURCE_TOML] = {toml_load, toml_unload, toml_new_frame, toml_get_element},
         [RESOURCE_FONT] = {font_load, font_unload},
         [RESOURCE_CLOCK] = {clock_load, clock_unload, NULL, clock_get_element},
@@ -124,4 +125,76 @@ void* resource_get_element(const char* key) {
         }
     }
     return NULL;
+}
+
+
+
+char *resource_make_substitutions(const char *str) {
+    size_t output_size = 32;
+    size_t current_size = 0;
+    char * output_string = pvPortMalloc(output_size);
+
+    const char* start_sub_tag = NULL;
+    const char* end_sub_tag = NULL;
+    bool escape = false;
+
+    while (*str) {
+        if (*str == '\\' && !escape) {
+            escape = true;
+            str++;
+            continue;
+        } else if (!escape && *str == '$') {
+            if (!start_sub_tag) {
+                start_sub_tag = str;
+            } else {
+                end_sub_tag = str;
+            }
+        } else if (!start_sub_tag) {
+            // taking in text normally
+            if (current_size >= (output_size-1)) {
+                char* new_string = pvPortMalloc(output_size + 32);
+                memcpy(new_string, output_string, output_size);
+                vPortFree(output_string);
+                output_string = new_string;
+                output_size += 32;
+            }
+            output_string[current_size++] = *str;
+        }
+
+        if (start_sub_tag && end_sub_tag) {
+            size_t substitution_tag_size = end_sub_tag-start_sub_tag;
+            char* to_substitute = pvPortMalloc(substitution_tag_size);
+            memcpy(to_substitute, start_sub_tag+1, substitution_tag_size);
+            to_substitute[substitution_tag_size-1] = '\0';
+
+            char* substituted = resource_get_element(to_substitute);
+            vPortFree(to_substitute);
+
+            if (substituted) {
+                size_t substitution_len = strlen(substituted);
+
+                if (substitution_len + current_size >= (output_size-1)) {
+                    char* new_string = pvPortMalloc(substitution_len + current_size + 1);
+                    memcpy(new_string, output_string, output_size);
+                    vPortFree(output_string);
+                    output_string = new_string;
+                    output_size = substitution_len + current_size + 1;
+                }
+
+                memcpy(&output_string[current_size], substituted, substitution_len);
+                current_size += substitution_len;
+
+                vPortFree(substituted);
+            }
+            start_sub_tag = NULL;
+            end_sub_tag = NULL;
+
+        }
+        str++;
+
+        escape = false;
+    }
+    // We've taken care to ensure there's always space for the null at the end.
+    output_string[current_size] = '\0';
+    return output_string;
 }
