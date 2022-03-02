@@ -17,13 +17,13 @@ void* system_get_element(void* table, const char *key) {
     if (strcmp(key, "version") == 0) {
         const char *ver = app_hal_version();
         size_t len = strlen(ver);
-        char* ver_copy = pvPortMalloc(len);
+        char* ver_copy = pvPortMalloc(len+1);
         strcpy(ver_copy, ver);
         return ver_copy;
     } else if (strcmp(key, "name") == 0) {
         const char *name = app_hal_name();
         size_t len = strlen(name);
-        char* name_copy = pvPortMalloc(len);
+        char* name_copy = pvPortMalloc(len+1);
         strcpy(name_copy, name);
         return name_copy;
     }
