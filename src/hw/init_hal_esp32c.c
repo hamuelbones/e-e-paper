@@ -146,3 +146,15 @@ void app_hal_init(void) {
     esp_pm_configure(&power_config);
 
 }
+
+void app_hal_reboot(void) {
+    esp_restart();
+}
+
+const char* app_hal_version(void) {
+    return esp_ota_get_app_description()->version;
+}
+
+const char* app_hal_name(void) {
+    return esp_ota_get_app_description()->project_name;
+}

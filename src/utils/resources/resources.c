@@ -35,7 +35,7 @@ static RESOURCE_CTX resources;
 static const RESOURCE_LOAD_INTERFACE interfaces[RESOURCE_MAX] = {
         [RESOURCE_SYSTEM] = {system_load, system_unload, NULL, system_get_element},
         [RESOURCE_TOML] = {toml_load, toml_unload, toml_new_frame, toml_get_element},
-        [RESOURCE_FONT] = {font_load, font_unload},
+        [RESOURCE_FONT] = {font_load, font_unload, NULL, NULL},
         [RESOURCE_CLOCK] = {clock_load, clock_unload, NULL, clock_get_element},
 };
 
@@ -143,7 +143,7 @@ char *resource_make_substitutions(const char *str) {
             escape = true;
             str++;
             continue;
-        } else if (!escape && *str == '$') {
+        } else if (!escape && *str == '|') {
             if (!start_sub_tag) {
                 start_sub_tag = str;
             } else {
