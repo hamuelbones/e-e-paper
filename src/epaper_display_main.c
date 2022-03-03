@@ -358,6 +358,7 @@ static int _state_init(uint8_t *message, size_t len)  {
     switch (message[0]) {
         case MAIN_MESSAGE_LOAD_STARTUP:
             epaper_init();
+            printf("\nstarting up: app %s, ver %s\n\n", app_hal_name(), app_hal_version());
             return _load_startup_file();
         default:
             break;
@@ -627,6 +628,11 @@ static int _state_run_app(uint8_t *message, size_t len) {
             render_toml(drawing_root, dims);
 
             epaper_render_buffer(dispbuf_active_buffer(), dispbuf_inactive_buffer(), BUFFER_SIZE);
+            // heap info (for memory tracking...)
+            free_heap = xPortGetFreeHeapSize();
+            min_free_heap = xPortGetMinimumEverFreeHeapSize();
+            printf("end - free heap: %u, min free heap: %u\n", free_heap, min_free_heap);
+
             return -1;
         }
         case MAIN_MESSAGE_TRIGGER_REFRESH: {
