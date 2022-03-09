@@ -13,8 +13,7 @@ The other side of the board primarily has passives on it.
 For reference, the output schematics, fabrication files (gerbers), and BOM from the initial schematics
 are provided in the `hardware/v1` folder of the repository.
 
-With the new design, the project files will be better structured to be repository-friendly,
-and KiCad project files will be added as well.
+Version 2 is now added, fixing many of the quirks listed below, but is in fab / not yet tested.
 
 # Quirks
 
@@ -36,3 +35,4 @@ prototype-like nature of v1):
 * More buttons would be nice. In particular, an additional button on the ESP32-C3 strapping pin
   to force USB flashing mode would be helpful for recovery.
 * An off switch might be helpful.
+
