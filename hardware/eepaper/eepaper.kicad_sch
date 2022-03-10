@@ -1971,7 +1971,6 @@
     )
   )
 
-
   (junction (at 200.66 35.56) (diameter 0) (color 0 0 0 0)
     (uuid 0a0f1967-82eb-4bc1-86eb-4bf5b3fb0ca0)
   )
@@ -2194,9 +2193,9 @@
 
   (no_connect (at 62.23 143.51) (uuid 01ce5cc6-9d68-4c57-811e-f5b954fc54d4))
   (no_connect (at 124.3584 84.0232) (uuid 06a0be06-d2a4-4c0a-b350-fe4e8002929a))
-  (no_connect (at 93.8784 84.0232) (uuid 06a0be06-d2a4-4c0a-b350-fe4e8002929a))
+  (no_connect (at 93.8784 84.0232) (uuid 06a0be06-d2a4-4c0a-b350-fe4e8002929b))
   (no_connect (at 62.23 167.64) (uuid 7ffe2fe0-e283-4008-bb81-b744115763a3))
-  (no_connect (at 62.23 181.61) (uuid 7ffe2fe0-e283-4008-bb81-b744115763a3))
+  (no_connect (at 62.23 181.61) (uuid 7ffe2fe0-e283-4008-bb81-b744115763a4))
   (no_connect (at 81.28 43.18) (uuid 9492fbc8-25d2-4706-b5d1-30ff5aeb8ee8))
   (no_connect (at 231.14 130.81) (uuid 98673d60-f35e-487e-a52f-8866d87ee8b9))
   (no_connect (at 40.64 43.18) (uuid 9d186367-c59c-464f-acf8-e52eb0913ec5))
@@ -3066,6 +3065,11 @@
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid 5628b3a0-6500-43d5-9d1d-b1e375fd802a)
   )
+  (text "Charge current ~100mA (set by R1).\nSet to 2k for 500ma (max).\nSee datasheet for other values."
+    (at 53.594 135.4328 0)
+    (effects (font (size 1.27 1.27)) (justify right bottom))
+    (uuid 6f946b48-6f8a-408f-a5e6-d6dbf8dddb5e)
+  )
   (text "Strapping Pin Switches" (at 120.0912 185.2168 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 70e59431-4c3e-4590-976a-2ae72945d448)
@@ -3461,7 +3465,7 @@
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 082b6270-54ea-45b5-8193-fd08dfeabc80)
     (property "Reference" "U3" (id 0) (at 156.21 20.32 0))
-    (property "Value" "ESP32-C3-WROOM-02-H4" (id 1) (at 156.21 22.86 0))
+    (property "Value" "ESP32-C3-WROOM-02-N4" (id 1) (at 156.21 22.86 0))
     (property "Footprint" "Project Footprints:MODULE_ESP32-C3-WROOM-02-H4" (id 2) (at 156.21 45.72 0)
       (effects (font (size 1.27 1.27)) (justify left bottom) hide)
     )
@@ -5490,7 +5494,7 @@
       (reference "U2") (unit 1) (value "RT9080-33GJ5") (footprint "Package_TO_SOT_SMD:SOT-23-5_HandSoldering")
     )
     (path "/082b6270-54ea-45b5-8193-fd08dfeabc80"
-      (reference "U3") (unit 1) (value "ESP32-C3-WROOM-02-H4") (footprint "Project Footprints:MODULE_ESP32-C3-WROOM-02-H4")
+      (reference "U3") (unit 1) (value "ESP32-C3-WROOM-02-N4") (footprint "Project Footprints:MODULE_ESP32-C3-WROOM-02-H4")
     )
   )
 )
