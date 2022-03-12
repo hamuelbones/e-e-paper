@@ -304,6 +304,7 @@ static int _load_startup_file(void) {
     if (display_name.ok) {
         _epaper = epaper_get_config_for_name(display_name.u.s);
         epaper_init(_epaper);
+        dispbuf_init(_epaper->width, _epaper->height);
         vPortFree(display_name.u.s);
     }
     return new_state;
@@ -632,7 +633,7 @@ static int _state_run_app(uint8_t *message, size_t len) {
             TOML_RESOURCE_CONTEXT *ctx = resource_get("config");
             toml_table_t *device_config = ctx->document;
             toml_table_t *drawing_root = toml_table_in(device_config, "render");
-            DISPLAY_COORD dims = {DISPLAY_WIDTH, DISPLAY_HEIGHT};
+            DISPLAY_COORD dims = {epaper_config()->width, epaper_config()->height};
             render_toml(drawing_root, dims);
 
             epaper_render_buffer(_epaper, dispbuf_active_buffer(), dispbuf_inactive_buffer(), _epaper->width * _epaper->height/8);

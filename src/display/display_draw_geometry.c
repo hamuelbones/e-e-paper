@@ -7,7 +7,8 @@
 #include <stdlib.h>
 
 void dispbuf_draw_point(uint16_t x, uint16_t y) {
-    if (x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT) {
+    DISPLAY_COORD dims = dispbuf_dims();
+    if (x >= dims.x || y >= dims.y) {
         return;
     }
 
@@ -15,7 +16,8 @@ void dispbuf_draw_point(uint16_t x, uint16_t y) {
 }
 
 void dispbuf_clear_point(uint16_t x, uint16_t y) {
-    if (x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT) {
+    DISPLAY_COORD dims = dispbuf_dims();
+    if (x >= dims.x || y >= dims.y) {
         return;
     }
     dispbuf_active_buffer()[100*y + x/8] &= ~(1 << (7-x%8));
