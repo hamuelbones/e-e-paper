@@ -13,6 +13,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <gtk/gtk.h>
+#include "epaper_hal.h"
 
 /* FreeRTOS kernel includes. */
 #include "FreeRTOS.h"
@@ -230,27 +231,33 @@ void *freertos_main_thread(void* params) {
     return NULL;
 }
 
-
-#define CANVAS_HEIGHT 480
-#define CANVAS_WIDTH 800
-
-
 static gboolean
 update_display(GtkWidget *widget, cairo_t *context, gpointer data)
 {
     static GdkPixbuf *pxb;
     static GBytes *bytes;
+    static int size_set;
 
-    if (pxb) {
-        //g_free(bytes);
-        //g_free(pxb);
+    const EPAPER_SPI_HAL_CONFIG *config = epaper_config();
+    if (config && data) {
+
+        if (!size_set) {
+            gtk_widget_set_size_request(widget, config->width, config->height);
+            size_set = 1;
+        }
+
+        if (pxb) {
+            //g_free(bytes);
+            //g_free(pxb);
+            //TODO This needs cleanup
+        }
+        bytes = g_bytes_new_static(data, 3*config->width*config->height);
+        pxb = gdk_pixbuf_new_from_bytes(bytes, GDK_COLORSPACE_RGB, gtk_false(), 8, config->width,config->height, config->width * 3);
+
+        gdk_cairo_set_source_pixbuf(context, pxb, 0, 0);
+        cairo_fill(context);
+        cairo_paint(context);
     }
-    bytes = g_bytes_new_static(data, 3*480*800);
-    pxb = gdk_pixbuf_new_from_bytes(bytes, GDK_COLORSPACE_RGB, gtk_false(), 8, 800, 480, 800*3);
-
-    gdk_cairo_set_source_pixbuf(context, pxb, 0, 0);
-    cairo_fill(context);
-    cairo_paint(context);
     // Do your drawing
     return FALSE;
 }
@@ -280,8 +287,8 @@ activate (GtkApplication *app,
     gtk_container_add (GTK_CONTAINER (window), grid);
 
     display_image = gtk_drawing_area_new();
-    gtk_widget_set_size_request(display_image, 800, 480);
-    extern uint8_t gtk_buffer[CANVAS_HEIGHT * CANVAS_WIDTH * 3];
+    //gtk_widget_set_size_request(display_image, 800, 480);
+    extern uint8_t* gtk_buffer;
     g_signal_connect(G_OBJECT(display_image), "draw", G_CALLBACK(update_display), gtk_buffer);
 
     /* Place the first button in the grid cell (0, 0), and make it fill

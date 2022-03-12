@@ -2,11 +2,14 @@
 // Created by Samuel Jones on 12/29/21.
 //
 
-#include "epaper_hal.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
+
+#include "epaper_hal.h"
+#include "epapers/epapers.h"
 
 #define GPIO_DISPLAY_CS (GPIO_NUM_9)
 
@@ -15,6 +18,8 @@
 #define GPIO_DISPLAY_BUSY (GPIO_NUM_20)
 
 static spi_device_handle_t _handle;
+static const EPAPER_SPI_HAL_CONFIG* _config;
+
 
 static void _write_display_command(spi_device_handle_t handle, const uint8_t *cmd, uint8_t len) {
     gpio_set_level(GPIO_DISPLAY_DC, 0);
@@ -41,8 +46,9 @@ static void _write_display_command(spi_device_handle_t handle, const uint8_t *cm
     gpio_set_level(GPIO_DISPLAY_DC, 0);
 }
 
-void epaper_init(void) {
+void epaper_init(const EPAPER_SPI_HAL_CONFIG* config) {
 
+    _config = config;
     gpio_deep_sleep_hold_en();
 
     gpio_config_t dc_rst = {
@@ -68,7 +74,7 @@ void epaper_init(void) {
 
     spi_device_interface_config_t deviceConfig = {
             .mode = 0,
-            .clock_speed_hz = 1*1000*1000,
+            .clock_speed_hz = _config->spi_speed_hz,
             .spics_io_num = GPIO_DISPLAY_CS,
             .queue_size = 4,
     };
@@ -78,162 +84,64 @@ void epaper_init(void) {
 
 }
 
-void epaper_render_buffer(const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
-
-    printf("Reset the EPD driver IC\n");
-    gpio_set_level(GPIO_DISPLAY_RST, 0);
-    vTaskDelay(2); // at least 5ms
-    gpio_set_level(GPIO_DISPLAY_RST, 1);
-    gpio_set_level(GPIO_DISPLAY_DC, 0);
-    vTaskDelay(3); // at least 20ms
-    while (!gpio_get_level(GPIO_DISPLAY_BUSY))  {vTaskDelay(1);}
-
-    printf("power setting\n");
-    const uint8_t power_setting[6] = {0x01, 0x17, 0x17, 0x3f, 0x3f, 0x11};
-    _write_display_command(_handle, power_setting, 6);
-
-    printf("VCOM DC setting\n");
-    const uint8_t vcom_dc_setting[2] = {0x82, 0x24};
-    _write_display_command(_handle, vcom_dc_setting, 2);
-
-    printf("Booster Setting\n");
-    const uint8_t booster_setting[5] = {0x06, 0x27, 0x27, 0x2f, 0x17};
-    _write_display_command(_handle, booster_setting, 5);
-
-    printf("power on\n");
-    const uint8_t power_on[1] = {0x04};
-    _write_display_command(_handle, power_on, 1);
-    vTaskDelay(2); // at least 10ms
-    while (!gpio_get_level(GPIO_DISPLAY_BUSY))  {vTaskDelay(1);}
-
-    printf("panel setting\n");
-    const uint8_t panel_setting[2] = {0x00, 0x3f};
-    _write_display_command(_handle, panel_setting, 2);
-
-    printf("tres setting\n");
-    const uint8_t tres_setting[5] = {0x61, 0x03, 0x20, 0x01, 0xe0};
-    _write_display_command(_handle, tres_setting, 5);
-
-    const uint8_t setting[2] = {0x15, 0x00};
-    _write_display_command(_handle, setting, 2);
-
-    printf("vcom and data interval\n");
-    const uint8_t vcom_data_interval_setting[3] = {0x50, 0x10, 0x00};
-    _write_display_command(_handle, vcom_data_interval_setting, 3);
-
-    printf("tcon setting\n");
-    const uint8_t tcon_setting[2] = {0x60, 0x22};
-    _write_display_command(_handle, tcon_setting, 2);
-
-    printf("resolution setting\n");
-    const uint8_t resolution_setting[4] = {0x65, 0x00, 0x00, 0x00};
-    _write_display_command(_handle, resolution_setting, 4);
-
-    printf("lut?\n");
-    const uint8_t lut20[43] = {
-            0x20,
-            0x0,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x0,	0xF,	0x1,	0xF,	0x1,	0x2,
-            0x0,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-    };
-    _write_display_command(_handle, lut20, 43);
-    const uint8_t  lut21[43] =
-            {0x21,
-             0x10,	0xF,	0xF,	0x0,	0x0,	0x1,
-             0x84,	0xF,	0x1,	0xF,	0x1,	0x2,
-             0x20,	0xF,	0xF,	0x0,	0x0,	0x1,
-             0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-             0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-             0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-             0x0,	0x0,	0x0,	0x0,	0x0,	0x0};
-
-    _write_display_command(_handle, lut21, 43);
-    const uint8_t lut22[43] ={
-            0x22,
-            0x10,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x84,	0xF,	0x1,	0xF,	0x1,	0x2,
-            0x20,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0};
-
-    _write_display_command(_handle, lut22, 43);
-
-    const uint8_t lut23[43] ={
-            0x23,
-            0x80,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x84,	0xF,	0x1,	0xF,	0x1,	0x2,
-            0x40,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0
-    };
-
-    _write_display_command(_handle, lut23, 43);
-    const uint8_t lut24[43] = {
-            0x24,
-            0x80,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x84,	0xF,	0x1,	0xF,	0x1,	0x2,
-            0x40,	0xF,	0xF,	0x0,	0x0,	0x1,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0,
-            0x0,	0x0,	0x0,	0x0,	0x0,	0x0
-    };
-    _write_display_command(_handle, lut24, 43);
+const EPAPER_SPI_HAL_CONFIG* epaper_config(void) {
+    return _config;
+}
 
 
-    printf("image data\n");
+void epaper_run_ops(const EPAPER_HAL_OP *op, const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
 
-    const uint8_t old_data[1] = {0x13};
-    _write_display_command(_handle, old_data, 1);
-    gpio_set_level(GPIO_DISPLAY_DC, 1);
-    for (int i=0; i<buffer_size; i+=256) {
-        spi_transaction_t transaction = {
-                .length=256*8, .tx_buffer=&old_buffer[i],
-        };
-        spi_device_polling_transmit(_handle, &transaction);
+    bool finished = false;
+    while (!finished) {
+        switch(op->id) {
+            case EPAPER_WAIT_UNTIL_READY:
+                while (!gpio_get_level(GPIO_DISPLAY_BUSY))  {vTaskDelay(1);}
+                break;
+            case EPAPER_RESET:
+                gpio_set_level(GPIO_DISPLAY_RST, 0);
+                vTaskDelay(op->length / portTICK_PERIOD_MS + 1); // at least 5ms
+                gpio_set_level(GPIO_DISPLAY_RST, 1);
+                gpio_set_level(GPIO_DISPLAY_DC, 0);
+                break;
+            case EPAPER_SEND_COMMAND:
+                _write_display_command(_handle, op->data, op->length);
+                break;
+            case EPAPER_WRITE_OLD_DATA:
+                gpio_set_level(GPIO_DISPLAY_DC, 1);
+                for (int i=0; i<buffer_size; i+=256) {
+                    spi_transaction_t transaction = {
+                            .length=256*8, .tx_buffer=&old_buffer[i],
+                    };
+                    spi_device_polling_transmit(_handle, &transaction);
+                }
+                gpio_set_level(GPIO_DISPLAY_DC, 0);
+                break;
+            case EPAPER_WRITE_NEW_DATA:
+                for (int i=0; i<buffer_size; i+=256) {
+                    spi_transaction_t transaction = {
+                            .length=256*8, .tx_buffer=&buffer[i],
+                    };
+                    spi_device_polling_transmit(_handle, &transaction);
+                }
+
+                gpio_set_level(GPIO_DISPLAY_DC, 0);
+                break;
+            case EPAPER_WAIT_TIME:
+                vTaskDelay(op->length / portTICK_PERIOD_MS + 1);
+                break;
+            case EPAPER_COMMAND_MAX:
+            default:
+                finished = true;
+                break;
+        }
+        op = op + 1;
     }
-    gpio_set_level(GPIO_DISPLAY_DC, 0);
+}
 
-    const uint8_t new_data[1] = {0x13};
-    _write_display_command(_handle, new_data, 1);
 
-    gpio_set_level(GPIO_DISPLAY_DC, 1);
+void epaper_render_buffer(const EPAPER_SPI_HAL_CONFIG* config, const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
 
-    for (int i=0; i<buffer_size; i+=256) {
-        spi_transaction_t transaction = {
-                .length=256*8, .tx_buffer=&buffer[i],
-        };
-        spi_device_polling_transmit(_handle, &transaction);
-    }
-
-    gpio_set_level(GPIO_DISPLAY_DC, 0);
-
-    vTaskDelay(2); // at least 10ms
-    while (!gpio_get_level(GPIO_DISPLAY_BUSY))  {vTaskDelay(1);}
-
-    printf("display refresh\n");
-
-    const uint8_t refresh[1] = {0x12};
-    _write_display_command(_handle, refresh, 1);
-    vTaskDelay(2); // at least 10ms
-    while (!gpio_get_level(GPIO_DISPLAY_BUSY))  {vTaskDelay(1);}
-
-    while (!gpio_get_level(GPIO_DISPLAY_BUSY))  {vTaskDelay(1);}
-
-    printf("power_off\n");
-
-    const uint8_t power_off[1] = {0x02};
-    _write_display_command(_handle, power_off, 1);
-
-    const uint8_t deep_sleep[2] = {0x07, 0xa5};
-    _write_display_command(_handle, deep_sleep, 2);
+    const EPAPER_HAL_OP *op = config->full_refresh_operation;
+    epaper_run_ops(op, buffer, old_buffer, buffer_size);
 
 }

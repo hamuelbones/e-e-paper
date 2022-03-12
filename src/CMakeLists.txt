@@ -4,6 +4,9 @@ if(SIMULATOR)
     add_executable(epaper_display epaper_display_main.c epaper_display_simulator_main.c wifi_task.c)
     target_include_directories(epaper_display PUBLIC .)
 
+
+    set(GTK3_GLIBCONFIG_INCLUDE_DIR /opt/homebrew/lib/glib-2.0/include/)
+
     # Use the package PkgConfig to detect GTK+ headers/library files
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)

@@ -27,6 +27,7 @@
 
 #include "render_toml.h"
 #include "epaper_hal.h"
+#include "epapers/epapers.h"
 
 #include "init_hal.h"
 
@@ -83,6 +84,7 @@ static MessageBufferHandle_t message_buffer;
 static TimerHandle_t _currentAppTimer = NULL;
 static TimerHandle_t _refreshTimer = NULL;
 static bool standalone = false;
+static const EPAPER_SPI_HAL_CONFIG *_epaper = NULL;
 
 static char jwt_header[600];
 
@@ -297,6 +299,13 @@ static int _load_startup_file(void) {
     }
 
     vPortFree(mode.u.s);
+
+    toml_datum_t display_name = toml_string_in(startup_config, "display");
+    if (display_name.ok) {
+        _epaper = epaper_get_config_for_name(display_name.u.s);
+        epaper_init(_epaper);
+        vPortFree(display_name.u.s);
+    }
     return new_state;
 
 }
@@ -357,7 +366,6 @@ static int _load_config_file(bool update_check) {
 static int _state_init(uint8_t *message, size_t len)  {
     switch (message[0]) {
         case MAIN_MESSAGE_LOAD_STARTUP:
-            epaper_init();
             printf("\nstarting up: app %s, ver %s\n\n", app_hal_name(), app_hal_version());
             return _load_startup_file();
         default:
@@ -487,7 +495,7 @@ static int _state_refresh_config(uint8_t *message, size_t len) {
             }
 
             // May load resources if necessary
-            int next_state = _load_config_file(true);
+            int next_state = _load_config_file(!standalone);
             return next_state;
         }
         default:
@@ -627,10 +635,10 @@ static int _state_run_app(uint8_t *message, size_t len) {
             DISPLAY_COORD dims = {DISPLAY_WIDTH, DISPLAY_HEIGHT};
             render_toml(drawing_root, dims);
 
-            epaper_render_buffer(dispbuf_active_buffer(), dispbuf_inactive_buffer(), BUFFER_SIZE);
+            epaper_render_buffer(_epaper, dispbuf_active_buffer(), dispbuf_inactive_buffer(), _epaper->width * _epaper->height/8);
             // heap info (for memory tracking...)
-            free_heap = xPortGetFreeHeapSize();
-            min_free_heap = xPortGetMinimumEverFreeHeapSize();
+            size_t free_heap = xPortGetFreeHeapSize();
+            size_t min_free_heap = xPortGetMinimumEverFreeHeapSize();
             printf("end - free heap: %u, min free heap: %u\n", free_heap, min_free_heap);
 
             return -1;

@@ -18,14 +18,24 @@ void app_hal_init(void) {
 
 }
 
-#define CANVAS_HEIGHT 480
-#define CANVAS_WIDTH 800
-uint8_t gtk_buffer[CANVAS_HEIGHT * CANVAS_WIDTH * 3];
+uint8_t *gtk_buffer;
 
-void epaper_init(void) {
+static const EPAPER_SPI_HAL_CONFIG* _config;
+
+void epaper_init(const EPAPER_SPI_HAL_CONFIG* config) {
+    _config = config;
+    if (!gtk_buffer) {
+        free(gtk_buffer);
+    }
+    gtk_buffer = calloc(_config->width * _config->height * 3, 1);
 }
 
-void epaper_render_buffer(const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
+const EPAPER_SPI_HAL_CONFIG* epaper_config(void) {
+    return _config;
+}
+
+
+void epaper_render_buffer(const EPAPER_SPI_HAL_CONFIG* config, const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
     for (int i=0; i<buffer_size*8; i++) {
         uint8_t val;
         if (buffer[i/8] & (1<<(7-i%8))) {
