@@ -95,7 +95,9 @@ void epaper_run_ops(const EPAPER_HAL_OP *op, const uint8_t *buffer, const uint8_
     while (!finished) {
         switch(op->id) {
             case EPAPER_WAIT_UNTIL_READY:
-                while (!gpio_get_level(GPIO_DISPLAY_BUSY))  {vTaskDelay(1);}
+                while (!gpio_get_level(GPIO_DISPLAY_BUSY)) {
+                    vTaskDelay(1);
+                }
                 break;
             case EPAPER_RESET:
                 gpio_set_level(GPIO_DISPLAY_RST, 0);
@@ -117,6 +119,7 @@ void epaper_run_ops(const EPAPER_HAL_OP *op, const uint8_t *buffer, const uint8_
                 gpio_set_level(GPIO_DISPLAY_DC, 0);
                 break;
             case EPAPER_WRITE_NEW_DATA:
+                gpio_set_level(GPIO_DISPLAY_DC, 1);
                 for (int i=0; i<buffer_size; i+=256) {
                     spi_transaction_t transaction = {
                             .length=256*8, .tx_buffer=&buffer[i],
