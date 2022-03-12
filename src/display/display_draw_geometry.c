@@ -12,7 +12,7 @@ void dispbuf_draw_point(uint16_t x, uint16_t y) {
         return;
     }
 
-    dispbuf_active_buffer()[100*y + x/8] |= 1<< (7-x%8);
+    dispbuf_active_buffer()[dims.x/8*y + x/8] |= 1<< (7-x%8);
 }
 
 void dispbuf_clear_point(uint16_t x, uint16_t y) {
@@ -20,7 +20,7 @@ void dispbuf_clear_point(uint16_t x, uint16_t y) {
     if (x >= dims.x || y >= dims.y) {
         return;
     }
-    dispbuf_active_buffer()[100*y + x/8] &= ~(1 << (7-x%8));
+    dispbuf_active_buffer()[dims.x/8*y + x/8] &= ~(1 << (7-x%8));
 }
 
 void dispbuf_draw_vertical_line(uint16_t x, uint16_t y1, uint16_t y2) {

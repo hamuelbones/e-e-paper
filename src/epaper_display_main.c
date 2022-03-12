@@ -303,6 +303,10 @@ static int _load_startup_file(void) {
     toml_datum_t display_name = toml_string_in(startup_config, "display");
     if (display_name.ok) {
         _epaper = epaper_get_config_for_name(display_name.u.s);
+        if (!_epaper) {
+            printf("No display matched: %s\n", display_name.u.s);
+            new_state = MAIN_STATE_INIT_ERROR;
+        }
         epaper_init(_epaper);
         dispbuf_init(_epaper->width, _epaper->height);
         vPortFree(display_name.u.s);
