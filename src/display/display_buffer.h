@@ -22,10 +22,13 @@ typedef struct {
     int16_t y;
 } DISPLAY_COORD;
 
-void dispbuf_init(uint16_t width, uint16_t height);
+void dispbuf_init(uint16_t width, uint16_t height, bool pixels_inverted, bool xy_flipped);
 void dispbuf_swap(void);
 void dispbuf_clear_active(void);
 DISPLAY_COORD dispbuf_dims(void);
+
+bool dispbuf_pixels_inverted(void);
+bool dispbuf_xy_flipped(void);
 
 uint8_t * dispbuf_active_buffer(void);
 uint8_t * dispbuf_inactive_buffer(void);

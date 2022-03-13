@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum {
     EPAPER_WAIT_UNTIL_READY = 0,
@@ -38,6 +39,8 @@ typedef struct {
     int spi_speed_hz;
     int width;
     int height;
+    bool bw_inverted;
+    bool xy_flipped;
     EPAPER_HAL_OP * full_refresh_operation;
 } EPAPER_SPI_HAL_CONFIG;
 

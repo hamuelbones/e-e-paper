@@ -308,7 +308,7 @@ static int _load_startup_file(void) {
             new_state = MAIN_STATE_INIT_ERROR;
         }
         epaper_init(_epaper);
-        dispbuf_init(_epaper->width, _epaper->height);
+        dispbuf_init(_epaper->width, _epaper->height, _epaper->bw_inverted, _epaper->xy_flipped);
         vPortFree(display_name.u.s);
     }
     return new_state;

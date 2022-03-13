@@ -7,12 +7,28 @@
 #include <stdlib.h>
 
 void dispbuf_draw_point(uint16_t x, uint16_t y) {
+
     DISPLAY_COORD dims = dispbuf_dims();
     if (x >= dims.x || y >= dims.y) {
         return;
     }
 
-    dispbuf_active_buffer()[dims.x/8*y + x/8] |= 1<< (7-x%8);
+    if (dispbuf_xy_flipped()) {
+        int new_x = y;
+        int new_y = dims.x-x;
+        x = new_x;
+        y = new_y;
+        new_x = dims.y;
+        new_y = dims.x;
+        dims.x = new_x;
+        dims.y = new_y;
+    }
+
+    if (dispbuf_pixels_inverted()) {
+        dispbuf_active_buffer()[dims.x/8*y + x/8] &= ~(1 << (7-x%8));
+    } else {
+        dispbuf_active_buffer()[dims.x/8*y + x/8] |= 1<< (7-x%8);
+    }
 }
 
 void dispbuf_clear_point(uint16_t x, uint16_t y) {
@@ -20,7 +36,23 @@ void dispbuf_clear_point(uint16_t x, uint16_t y) {
     if (x >= dims.x || y >= dims.y) {
         return;
     }
-    dispbuf_active_buffer()[dims.x/8*y + x/8] &= ~(1 << (7-x%8));
+
+    if (dispbuf_xy_flipped()) {
+        int new_x = y;
+        int new_y = dims.x-x;
+        x = new_x;
+        y = new_y;
+        new_x = dims.y;
+        new_y = dims.x;
+        dims.x = new_x;
+        dims.y = new_y;
+    }
+
+    if (dispbuf_pixels_inverted()) {
+        dispbuf_active_buffer()[dims.x/8*y + x/8] |= 1<< (7-x%8);
+    } else {
+        dispbuf_active_buffer()[dims.x/8*y + x/8] &= ~(1 << (7-x%8));
+    }
 }
 
 void dispbuf_draw_vertical_line(uint16_t x, uint16_t y1, uint16_t y2) {

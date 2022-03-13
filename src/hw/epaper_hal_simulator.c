@@ -37,15 +37,23 @@ const EPAPER_SPI_HAL_CONFIG* epaper_config(void) {
 
 void epaper_render_buffer(const EPAPER_SPI_HAL_CONFIG* config, const uint8_t *buffer, const uint8_t *old_buffer, size_t buffer_size) {
     for (int i=0; i<buffer_size*8; i++) {
+
+        int bit = i;
+        if (_config->xy_flipped) {
+            int x = _config->width - i/_config->height;
+            int y = i%_config->height;
+            bit = y * _config->width + x;
+        }
+
         uint8_t val;
         if (buffer[i/8] & (1<<(7-i%8))) {
-            val = 0;
+            val =  _config->bw_inverted ? 0xFF : 0;
         } else {
-            val = 0xFF;
+            val = _config->bw_inverted ? 0 : 0xFF;
         }
-        gtk_buffer[i*3] = val;
-        gtk_buffer[i*3+1] = val;
-        gtk_buffer[i*3+2] = val;
+        gtk_buffer[bit*3] = val;
+        gtk_buffer[bit*3+1] = val;
+        gtk_buffer[bit*3+2] = val;
     }
 }
 

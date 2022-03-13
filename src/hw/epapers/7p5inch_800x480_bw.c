@@ -105,5 +105,7 @@ const EPAPER_SPI_HAL_CONFIG g_7p5inch_800x480_bw = {
     .spi_speed_hz = 10*1000*1000,
     .width = 800,
     .height = 480,
+    .bw_inverted = false,
+    .xy_flipped = false,
     .full_refresh_operation = (EPAPER_HAL_OP*) epaper7p5bw_full_refresh,
 };
