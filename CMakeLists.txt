@@ -2,6 +2,8 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.20)
 
+add_compile_definitions(HARDWARE_VER=${HARDWARE_VER})
+
 if(SIMULATOR)
     project(epaper_display)
     add_subdirectory(src)

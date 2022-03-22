@@ -11,11 +11,17 @@
 #include "epaper_hal.h"
 #include "epapers/epapers.h"
 
+#if (!HARDWARE_VER)
 #define GPIO_DISPLAY_CS (GPIO_NUM_9)
-
 #define GPIO_DISPLAY_DC (GPIO_NUM_3)
 #define GPIO_DISPLAY_RST (GPIO_NUM_21)
 #define GPIO_DISPLAY_BUSY (GPIO_NUM_20)
+#elif (HARDWARE_VER == 2)
+#define GPIO_DISPLAY_CS (GPIO_NUM_9)
+#define GPIO_DISPLAY_DC (GPIO_NUM_10)
+#define GPIO_DISPLAY_BUSY (GPIO_NUM_20)
+#define GPIO_DISPLAY_RST (GPIO_NUM_21)
+#endif
 
 static spi_device_handle_t _handle;
 static const EPAPER_SPI_HAL_CONFIG* _config;
