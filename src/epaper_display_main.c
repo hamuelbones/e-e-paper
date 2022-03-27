@@ -25,9 +25,12 @@
 #include "epaper_display_main.h"
 #include "display_buffer.h"
 
-#include "render_toml.h"
 #include "epaper_hal.h"
 #include "epapers/epapers.h"
+
+#include "i2s_microphone_hal.h"
+#include "i2s_speaker_hal.h"
+#include "driver/gpio.h"
 
 #include "init_hal.h"
 
@@ -597,17 +600,29 @@ static int _state_refresh_resources(uint8_t *message, size_t len) {
     return -1;
 }
 
+
+bool until_button_up(void* params) {
+    int button = (int) params;
+    return (gpio_get_level(button));
+}
+
+#include "display_draw_image.h"
+#include "display_draw_text.h"
+#include "display_draw_geometry.h"
+
 static int _state_run_app(uint8_t *message, size_t len) {
 
     switch(message[0]) {
         case MAIN_MESSAGE_APP_INIT: {
-            uint32_t refresh_seconds = 10;
+
+            // TODO fix this config so ms is ok
+            uint32_t refresh_milliseconds = 100;
             TOML_RESOURCE_CONTEXT *ctx = resource_get("config");
             toml_table_t *app_info = toml_table_in(ctx->document, "application");
             if (app_info) {
                 toml_datum_t refresh = toml_int_in(app_info, "refresh_interval_sec");
                 if (refresh.ok) {
-                    refresh_seconds = refresh.u.i;
+                    //refresh_seconds = refresh.u.i;
                 }
             }
 
@@ -617,20 +632,88 @@ static int _state_run_app(uint8_t *message, size_t len) {
             xMessageBufferSend(wifi_message_buffer(), &request, sizeof(WIFI_REQUEST), portMAX_DELAY);
 
             if (!_currentAppTimer) {
-                _currentAppTimer = xTimerCreate("App", 1000*refresh_seconds/portTICK_PERIOD_MS, pdTRUE,
+                _currentAppTimer = xTimerCreate("App", refresh_milliseconds/portTICK_PERIOD_MS, pdTRUE,
                                                 NULL, _app_timer_callback);
             } else {
-                xTimerChangePeriod(_currentAppTimer, 1000*refresh_seconds/portTICK_PERIOD_MS, portMAX_DELAY);
+                xTimerChangePeriod(_currentAppTimer, refresh_milliseconds/portTICK_PERIOD_MS, portMAX_DELAY);
             }
             xTimerStart(_currentAppTimer, portMAX_DELAY);
 
             if (!_refreshTimer) {
-                _refreshTimer = xTimerCreate("Ref", 30*60*1000/portTICK_PERIOD_MS, pdTRUE, NULL, _refresh_callback);
+                // TODO restore
+                //_refreshTimer = xTimerCreate("Ref", 30*60*1000/portTICK_PERIOD_MS, pdTRUE, NULL, _refresh_callback);
             }
             _app_timer_callback(NULL);
         }
             break;
         case MAIN_MESSAGE_APP: {
+
+            const char *recording = "/int/recording.wav";
+            static bool first = true;
+            bool refresh = first;
+            first = false;
+            if (gpio_get_level(BUTTON_2) == 0) {
+                // play
+                printf("Playing!!");
+                void* button = (void*)(BUTTON_2);
+                speaker_play_wav(recording, until_button_up, &button);
+            }
+
+            if (gpio_get_level(BUTTON_3) == 0) {
+                // record
+                printf("Recording!");
+                void* button = (void*)(BUTTON_3);
+
+                speaker_play_wav("/int/beep.wav", until_button_up, &button);
+
+                if (gpio_get_level(BUTTON_3) == 0) {
+                    microphone_record_wav(recording, until_button_up, &button);
+                    speaker_play_wav("/int/done.wav", until_button_up, &button);
+                    refresh = true;
+                }
+            }
+
+            if (refresh) {
+                dispbuf_swap();
+                dispbuf_clear_active();
+
+                // TODO turn this into a config file
+
+                DISPLAY_COORD upper_left = {1, 8};
+                DISPLAY_COORD bottom_right = {288, 125};
+                dispbuf_draw_rect_line(upper_left, bottom_right, 3, false, true);
+
+                DISPLAY_COORD text_start = {5, 11};
+                dispbuf_draw_text(text_start, "HAPPY BIRTHDAY CORA!!", font_get_table(NEW_YORK_14), 283, 25, DRAW_JUSTIFY_HORIZ_CENTER);
+                dispbuf_draw_horizontal_line(28, 1, 288);
+                int min_y = 28;
+                int max_y = 122;
+
+                int min_x = 5;
+                int max_x = 283;
+
+                struct stat st;
+                fs_stat(recording, &st);
+                file_handle f = fs_open(recording, "rb");
+                if (f) {
+                    size_t samples = (st.st_size - 44) / 2;
+                    fs_fseek(f, 44, SEEK_SET);
+                    for (int i=0; i<samples; i++) {
+                        short sample;
+                        fs_read(f, &sample, 2);
+                        int x = (i * (max_x-min_x)) / samples + min_x;
+                        int y = (((int)sample + 32768) * (max_y - min_y)) / 65536 + min_y;
+                        dispbuf_draw_point(x, y);
+                    }
+
+                    fs_close(f);
+                }
+                epaper_render_buffer(_epaper, dispbuf_active_buffer(), dispbuf_inactive_buffer(), _epaper->width * _epaper->height/8);
+
+            }
+
+#if 0
+
             dispbuf_swap();
             dispbuf_clear_active();
 
@@ -641,10 +724,12 @@ static int _state_run_app(uint8_t *message, size_t len) {
             render_toml(drawing_root, dims);
 
             epaper_render_buffer(_epaper, dispbuf_active_buffer(), dispbuf_inactive_buffer(), _epaper->width * _epaper->height/8);
+
             // heap info (for memory tracking...)
             size_t free_heap = xPortGetFreeHeapSize();
             size_t min_free_heap = xPortGetMinimumEverFreeHeapSize();
             printf("end - free heap: %u, min free heap: %u\n", free_heap, min_free_heap);
+#endif
 
             return -1;
         }
@@ -683,7 +768,8 @@ void _Noreturn app_main(void)
 #endif
 
     app_hal_init();
-    fs_mount();
+    fs_mount_internal();
+    fs_mount_external();
 
     // TODO What if there is not an SD card? need to use internal only
     cryptography_init();

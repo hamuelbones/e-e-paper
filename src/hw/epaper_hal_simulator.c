@@ -57,3 +57,6 @@ void epaper_render_buffer(const EPAPER_SPI_HAL_CONFIG* config, const uint8_t *bu
     }
 }
 
+void epaper_deinit(void) {
+
+}

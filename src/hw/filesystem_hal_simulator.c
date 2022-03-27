@@ -2,8 +2,8 @@
 // Created by Samuel Jones on 1/7/22.
 //
 
-#include <filesystem_hal.h>
 #include <stdlib.h>
+#include "filesystem_hal.h"
 
 // TODO make this relative or configurable
 const char* filesystem_base_default = "./";
@@ -18,19 +18,36 @@ static void _full_path(const char* name, char* fullName, int len) {
     snprintf(fullName, len, "%s%s", filesystem_base, name);
 }
 
-int fs_mount(void) {
+int fs_mount_internal(void) {
 
     char fullPath[200];
     _full_path(INTERNAL_MOUNT_POINT, fullPath, 200);
     mkdir(fullPath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    _full_path( SD_MOUNT_POINT, fullPath, 200);
-    mkdir(fullPath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
     return 0;
 }
 
-void fs_unmount(void) {
+int fs_mount_external(void) {
 
+    char fullPath[200];
+    _full_path( SD_MOUNT_POINT, fullPath, 200);
+    mkdir(fullPath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    return 0;
+}
+
+void fs_unmount_internal(void) {
+
+}
+
+void fs_unmount_external(void) {
+
+}
+
+bool fs_internal_mounted(void) {
+    return true;
+}
+
+bool fs_external_mounted(void) {
+    return true;
 }
 
 file_handle fs_open(const char* name, const char* mode) {

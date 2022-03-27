@@ -154,3 +154,8 @@ void epaper_render_buffer(const EPAPER_SPI_HAL_CONFIG* config, const uint8_t *bu
     epaper_run_ops(op, buffer, old_buffer, buffer_size);
 
 }
+
+void epaper_deinit(void) {
+    spi_bus_remove_device(_handle);
+    _handle = NULL;
+}

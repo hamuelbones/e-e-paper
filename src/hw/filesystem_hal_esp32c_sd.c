@@ -14,35 +14,23 @@
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
-#include "esp_spiffs.h"
+#include "esp_littlefs.h"
 
 typedef void* file_handle;
 
 #define GPIO_SD_CS (GPIO_NUM_8)
 static const char *TAG = "example";
 
-// FS characteristics should be known by hardware.
-int fs_mount(void) {
+static sdmmc_card_t *card = NULL;
+static bool external_mounted = false;
+static bool internal_mounted = false;
 
-    esp_err_t ret;
-
-    esp_vfs_spiffs_conf_t spiffs_conf = {
-        .base_path = INTERNAL_MOUNT_FOLDER,
-        .format_if_mount_failed = true,
-        .max_files = 2,
-        .partition_label = "fs",
-    };
-    ret = esp_vfs_spiffs_register(&spiffs_conf);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount internal flash partition, %08x", ret);
-        return -1;
-    }
-    ESP_LOGI(TAG, "Internal filesystem mounted");
-
+int fs_mount_external(void) {
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
     slot_config.gpio_cs = GPIO_SD_CS;
     slot_config.host_id = host.slot;
+    esp_err_t ret;
 
     // Options for mounting the filesystem.
     esp_vfs_fat_sdmmc_mount_config_t sd_mount_config = {
@@ -51,7 +39,6 @@ int fs_mount(void) {
             .allocation_unit_size = 16 * 1024
     };
 
-    sdmmc_card_t *card;
     ESP_LOGI(TAG, "Mounting filesystem");
     // TODO recommended to do more proper SD card probing + partition mounting manually
     ret = esp_vfs_fat_sdspi_mount(SD_MOUNT_FOLDER, &host, &slot_config, &sd_mount_config, &card);
@@ -69,13 +56,50 @@ int fs_mount(void) {
     ESP_LOGI(TAG, "Filesystem mounted");
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
-
+    external_mounted = true;
 
     return 0;
 }
-void fs_unmount(void) {
-    // Not implemented
+
+void fs_unmount_external(void) {
+    if (card && external_mounted) {
+        esp_vfs_fat_sdcard_unmount(SD_MOUNT_FOLDER, card);
+    }
+    external_mounted = false;
 }
+
+bool fs_external_mounted(void) {
+    return external_mounted;
+}
+
+int fs_mount_internal(void) {
+
+    esp_err_t ret;
+    esp_vfs_littlefs_conf_t littlefs_conf = {
+        .base_path = INTERNAL_MOUNT_FOLDER,
+        .format_if_mount_failed = true,
+        .partition_label = "fs",
+    };
+    ret = esp_vfs_littlefs_register(&littlefs_conf);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to mount internal flash partition, %08x", ret);
+        return -1;
+    }
+
+    ESP_LOGI(TAG, "Internal filesystem mounted");
+    internal_mounted = true;
+    return 0;
+}
+
+void fs_unmount_internal(void) {
+    esp_vfs_littlefs_unregister("fs");
+    internal_mounted = false;
+}
+
+bool fs_internal_mounted(void) {
+    return internal_mounted;
+}
+
 
 file_handle fs_open(const char* name, const char* mode) {
     return fopen(name, mode);

@@ -13,33 +13,9 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
-#if (!HARDWARE_VER)
-
-#define GPIO_CHG_EN (GPIO_NUM_4)
-#define GPIO_CHG_PGOOD (GPIO_NUM_7)
-#define GPIO_CHG_STAT1 (GPIO_NUM_5)
-#define GPIO_CHG_STAT2 (GPIO_NUM_6)
-
-#define SPI_SCK (GPIO_NUM_0)
-#define SPI_MOSI (GPIO_NUM_1)
-#define SPI_MISO (GPIO_NUM_2)
-
-#define BUTTON_0 (GPIO_NUM_10)
-
-#elif (HARDWARE_VER == 2)
-
-#define BUTTON_0 (GPIO_NUM_0)
-#define BUTTON_1 (GPIO_NUM_1)
-#define BUTTON_2 (GPIO_NUM_2)
-#define BUTTON_3 (GPIO_NUM_3)
-
-#define BATT_MEAS (GPIO_NUM_4)
-
-#define SPI_SCK (GPIO_NUM_7)
-#define SPI_MOSI (GPIO_NUM_5)
-#define SPI_MISO (GPIO_NUM_6)
-
-#endif
+#include "epaper_hal.h"
+#include "filesystem_hal.h"
+#include "init_hal.h"
 
 void app_hal_init(void) {
 
@@ -105,6 +81,14 @@ void app_hal_init(void) {
             .pull_up_en = 1,
     };
     gpio_config(&button);
+
+
+    // TODO this is hardcoded for I2S setup, should move
+    button.pin_bit_mask = 1<<BUTTON_1;
+    button.pull_up_en = 0,
+    button.mode = GPIO_MODE_OUTPUT,
+    gpio_config(&button);
+    gpio_set_level(BUTTON_1, 0);
 
     gpio_config_t batt_meas = {
             .intr_type = 0,
@@ -182,7 +166,6 @@ void app_hal_init(void) {
     power_config.min_freq_mhz = 40;
     power_config.max_freq_mhz = CONFIG_ESP32C3_DEFAULT_CPU_FREQ_MHZ;
     esp_pm_configure(&power_config);
-
 }
 
 void app_hal_reboot(void) {
@@ -195,4 +178,48 @@ const char* app_hal_version(void) {
 
 const char* app_hal_name(void) {
     return esp_ota_get_app_description()->project_name;
+}
+
+const static EPAPER_SPI_HAL_CONFIG *config_to_restore;
+static bool should_remount_external;
+
+void app_yield_spi_bus(void) {
+    // check for epaper device
+    config_to_restore = epaper_config();
+    if (config_to_restore) {
+        epaper_deinit();
+    }
+
+    // check for SD device
+    should_remount_external = fs_external_mounted();
+    if (should_remount_external) {
+        fs_unmount_external();
+    }
+
+    // free bus
+    spi_bus_free(SPI2_HOST);
+}
+
+void app_resume_spi_bus(void) {
+
+    spi_bus_config_t busConfig = {
+            .miso_io_num = SPI_MISO,
+            .mosi_io_num = SPI_MOSI,
+            .sclk_io_num = SPI_SCK,
+            .quadhd_io_num = -1,
+            .quadwp_io_num = -1,
+            .max_transfer_sz = 5000,
+    };
+
+    spi_bus_initialize(SPI2_HOST, &busConfig, SPI_DMA_CH_AUTO);
+
+    if (should_remount_external) {
+        fs_mount_external();
+        should_remount_external = false;
+    }
+
+    if (config_to_restore) {
+        epaper_init(config_to_restore);
+        config_to_restore = NULL;
+    }
 }

@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <sys/stat.h>
+#include "stdbool.h"
 
 #ifndef EPAPER_DISPLAY_FILESYSTEM_HAL_H
 #define EPAPER_DISPLAY_FILESYSTEM_HAL_H
@@ -20,8 +21,13 @@
 
 typedef void* file_handle;
 
-// FS characteristics should be known by hardware.
-int fs_mount(void);
+int fs_mount_internal(void);
+int fs_mount_external(void);
+void fs_unmount_internal(void);
+void fs_unmount_external(void);
+bool fs_internal_mounted(void);
+bool fs_external_mounted(void);
+
 file_handle fs_open(const char* name, const char* mode);
 int fs_read(file_handle handle, void* buf, int len);
 int fs_write(file_handle handle, void* buf, int len);

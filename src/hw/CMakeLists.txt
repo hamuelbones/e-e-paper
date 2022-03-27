@@ -14,10 +14,12 @@ else()
             SRCS "epaper_hal_esp32c.c" "epapers/7p5inch_800x480_bw.c" "epapers/2p9inch_296x128_bw.c" "epapers/epapers.c"
                  "wifi_hal_esp32c.c"
                  "init_hal_esp32c.c"
+                 "i2s_microphone_hal_esp32c.c"
+                 "i2s_speaker_hal_esp32c.c"
                  "filesystem_hal_esp32c_sd.c"
                  "cryptography_hal_esp32c.c"
                  "time_hal_esp32c.c"
             INCLUDE_DIRS "."
-            REQUIRES spi_flash nvs_flash fatfs spiffs esp_http_client esp_https_ota app_update lwip mbedtls esp_pm freertos
+            REQUIRES spi_flash nvs_flash fatfs esp_littlefs esp_http_client esp_https_ota app_update lwip mbedtls esp_pm freertos driver
     )
 endif()
