@@ -64,7 +64,12 @@ bool cryptography_rsa_generate(const char *private_filename,
         printf("pk_setup failed: %i\n", result);
     }
 
-    esp_task_wdt_init(30, false);
+    esp_task_wdt_config_t config;
+    config.timeout_ms = 30000;
+    config.idle_core_mask = (1<<0);
+    config.trigger_panic = true;
+
+    esp_task_wdt_init(&config);
     result = mbedtls_rsa_gen_key(mbedtls_pk_rsa(pk_ctx), _cryptography_fill_random, NULL, 2048, 0x10001);
     if (result != 0) {
         mbedtls_pk_free(&pk_ctx);
@@ -139,7 +144,7 @@ bool cryptography_digest_sha(const uint8_t *data,
         printf("Unsupported SHA mode\n");
         return false;
     }
-    int result = mbedtls_sha256_ret(data, len, output, 0);
+    int result = mbedtls_sha256(data, len, output, 0);
 
     if (result != 0) {
         printf("SHA hash calculation failure! (%d)", result);
@@ -168,7 +173,7 @@ bool cryptography_sign_rsa(const char* private_filename,
     }
 
     int result;
-    result = mbedtls_pk_parse_keyfile(&pk_ctx, private_filename, NULL);
+    result = mbedtls_pk_parse_keyfile(&pk_ctx, private_filename, NULL, _cryptography_fill_random, NULL);
     if (result != 0) {
         printf("Failed to import data from PEM file! (%d)\n", result);
         return false;
@@ -176,7 +181,7 @@ bool cryptography_sign_rsa(const char* private_filename,
 
     *output = pvPortMalloc(256);
 
-    result = mbedtls_pk_sign(&pk_ctx, MBEDTLS_MD_SHA256, data, len, *output, output_len, _cryptography_fill_random, NULL);
+    result = mbedtls_pk_sign(&pk_ctx, MBEDTLS_MD_SHA256, data, len, *output, 256, output_len, _cryptography_fill_random, NULL);
     mbedtls_pk_free(&pk_ctx);
     if (result != 0) {
         printf("Failed to generate signature! (%d)\n", result);

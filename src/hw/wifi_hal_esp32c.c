@@ -43,7 +43,7 @@ static int reconnect_count;
 static void event_handler(void* arg, esp_event_base_t event_base,
                           int32_t event_id, void* event_data)
 {
-    printf("base: %s, id: %d\n", event_base, event_id);
+    printf("base: %s, id: %d\n", event_base, (int) event_id);
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         xEventGroupSetBits(_event_group, ESP_WIFI_STARTED);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_STOP) {
@@ -183,13 +183,20 @@ bool wifi_http_get(const char* host,
     strcat(full_url, subdirectory);
     config.url = full_url;
 
+    esp_https_ota_config_t ota_config = {
+            .http_config = &config,
+            .bulk_flash_erase = false,
+            .partial_http_download = true,
+            .max_http_request_size = 100000
+    };
+
     // TODO - Check server certificate
 
 
     // Special OTA update integration
     if (is_ota_update) {
         printf("Attempting to download update from %s\n", config.url);
-        esp_err_t ret = esp_https_ota(&config);
+        esp_err_t ret = esp_https_ota(&ota_config);
 
         if (ret == ESP_OK) {
             printf("Update downloaded -rebooting\n");
@@ -284,7 +291,7 @@ uint32_t wifi_get_ntp(const char* host) {
     EventBits_t bits = xEventGroupWaitBits(_event_group, ESP_WIFI_TIME_SYNC,
                                            true, false, 20000/portTICK_PERIOD_MS);
 
-    printf("Unix time: %u\t", _time.tv_sec);
+    printf("Unix time: %llu\t", _time.tv_sec);
 
     sntp_stop();
 

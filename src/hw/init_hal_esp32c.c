@@ -4,9 +4,10 @@
 #include "freertos/task.h"
 #include "sdkconfig.h"
 #include "esp_system.h"
-#include "esp_spi_flash.h"
+#include "spi_flash_mmap.h"
 #include "esp_pm.h"
 #include "esp_ota_ops.h"
+#include "esp_chip_info.h"
 
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -20,6 +21,7 @@
 void app_hal_init(void) {
 
     /* Print chip information */
+
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);
     printf("This is %s chip with %d CPU core(s), WiFi%s%s, ",
@@ -30,10 +32,12 @@ void app_hal_init(void) {
 
     printf("silicon revision %d, ", chip_info.revision);
 
-    printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
+    uint32_t size_flash_chip;
+    esp_flash_get_size(NULL, &size_flash_chip);
+    printf("%luMB %s flash\n", size_flash_chip / (1024 * 1024),
            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
-    printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
+    printf("Minimum free heap size: %lu bytes\n", esp_get_minimum_free_heap_size());
 
 
 #if (!HARDWARE_VER)
@@ -151,7 +155,7 @@ void app_hal_init(void) {
 
         // Write
         restart_counter++;
-        printf("Restart counter = %d\n", restart_counter);
+        printf("Restart counter = %ld\n", restart_counter);
         nvs_set_i32(my_handle, "restart_counter", restart_counter);
 
         printf("Committing updates in NVS ... ");
@@ -173,11 +177,11 @@ void app_hal_reboot(void) {
 }
 
 const char* app_hal_version(void) {
-    return esp_ota_get_app_description()->version;
+    return esp_app_get_description()->version;
 }
 
 const char* app_hal_name(void) {
-    return esp_ota_get_app_description()->project_name;
+    return esp_app_get_description()->project_name;
 }
 
 const static EPAPER_SPI_HAL_CONFIG *config_to_restore;

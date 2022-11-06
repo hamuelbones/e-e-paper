@@ -20,6 +20,6 @@ else()
                  "cryptography_hal_esp32c.c"
                  "time_hal_esp32c.c"
             INCLUDE_DIRS "."
-            REQUIRES spi_flash nvs_flash fatfs esp_littlefs esp_http_client esp_https_ota app_update lwip mbedtls esp_pm freertos driver
+            REQUIRES spi_flash nvs_flash fatfs esp_littlefs esp_http_client esp_https_ota app_update lwip mbedtls esp_pm freertos driver esp_wifi esp_event esp_hw_support
     )
 endif()

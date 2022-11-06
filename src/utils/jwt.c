@@ -56,7 +56,7 @@ void jwt_encode_string(JWT_ENTRY *entry, const char* string) {
 
 void jwt_encode_uint(JWT_ENTRY *entry, uint32_t uint) {
     char encoded_integer[12];
-    size_t len = snprintf(encoded_integer, 12, "%u", uint);
+    size_t len = snprintf(encoded_integer, 12, "%u", (unsigned int) uint);
     jwt_append_token(entry, encoded_integer, len);
 }
 

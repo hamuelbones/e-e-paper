@@ -104,12 +104,12 @@ static void toml_get_next_token(const char** key, char* token, size_t max_token_
 }
 
 static bool is_numeric(const char* str) {
-    if (!isdigit(*str) && *str!='-' && *str!='+') {
+    if (!isdigit((unsigned char)*str) && *str!='-' && *str!='+') {
         return false;
     }
     str++;
     while (*str) {
-        if (!isdigit(*str)) {
+        if (!isdigit((unsigned char)str[0])) {
             return false;
         }
         str++;
